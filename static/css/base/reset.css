@@ -1,0 +1,24 @@
+/* CSS Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  text-decoration-thickness: 0.1rem;
+}
+
+html {
+  font-size: 1.25rem;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font);
+  line-height: 1.6;
+  color: var(--fg);
+  background: var(--bg);
+  margin: 0;
+}
+
+a {
+  color: var(--fg);
+}

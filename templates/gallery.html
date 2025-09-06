@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="stylesheet" href="/static/css/main.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="gallery-header">
+        <nav class="gallery-nav">
+          <h1><a href="/" class="gallery-title-link">Pelican Art Gallery</a></h1>
+        </nav>
+      </header>
+
+      {{if .Categories}}
+      <nav class="category-nav">
+        <div class="category-nav-container">
+          <a href="/gallery" class="category-link {{if not $.Category}}active{{end}}">all</a>
+          {{range .Categories}}
+          <a href="/gallery/category/{{.}}" class="category-link {{if eq $.Category .}}active{{end}}">{{.}}</a>
+          {{end}}
+        </div>
+      </nav>
+      {{end}}
+
+      <main class="gallery-container">
+        {{if .Groups}}
+        <div class="artworks-grid">
+          {{range .Groups}}
+          <div class="artwork-group">
+            <h2 class="artwork-title">{{.Title}}</h2>
+            {{if $.EditingEnabled}}
+            <div class="artwork-meta-info">
+              <a href="/workshop?edit={{.Slug}}" class="edit-artwork-btn">Edit</a>
+            </div>
+            {{end}}
+            <p class="artwork-description">{{.Prompt}}</p>
+            <div class="artwork-variations">
+              {{range .Artworks}}
+              <div class="artwork-card" data-slug="{{.Slug}}" data-model="{{.Model}}">
+                <div class="artwork-preview">{{.SVGContent}}</div>
+                <div class="artwork-model-info">
+                  <div class="model-name">{{modelName .Model}}</div>
+                </div>
+              </div>
+              {{end}}
+            </div>
+          </div>
+          {{end}}
+        </div>
+        {{else}}
+        <div class="empty-gallery">
+          <h3>No artworks yet</h3>
+          <p>Start creating some artwork to see them here!</p>
+          {{if .EditingEnabled}}
+          <a href="/workshop" class="nav-link">Create Artwork</a>
+          {{end}}
+        </div>
+        {{end}}
+      </main>
+
+      <footer>
+        <p>Created by <a href="https://koenvangilst.nl" target="_blank" rel="noopener noreferrer">Koen van Gilst</a></p>
+      </footer>
+    </div>
+
+    {{if .EditingEnabled}}
+    <!-- Floating create button -->
+    <a href="/workshop" class="floating-create-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    </a>
+    {{end}}
+  </body>
+</html>

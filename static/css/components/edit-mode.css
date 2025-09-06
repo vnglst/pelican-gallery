@@ -1,0 +1,25 @@
+/* Edit Mode Components */
+
+/* Edit Banner */
+.edit-banner {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+  padding: var(--spacing-md) 0;
+  text-align: center;
+  background-image: none !important;
+}
+
+.edit-banner-content {
+  max-width: var(--main-width);
+  margin: 0 auto;
+  padding: 0 var(--spacing-xl);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.edit-banner .icon {
+  display: none;
+}

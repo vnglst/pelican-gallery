@@ -1,0 +1,10 @@
+/* Footer Layout */
+footer {
+  text-align: center;
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-xl) 0;
+  font-size: 0.8rem;
+  border-top: var(--border);
+  opacity: 0.6;
+  color: var(--fg);
+}

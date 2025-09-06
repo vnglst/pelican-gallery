@@ -1,0 +1,578 @@
+/* Button Components */
+
+/* Base button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: var(--transition-fast);
+  text-decoration: none;
+}
+
+/* Button variants */
+.btn-primary,
+.primary-btn {
+  background: var(--fg);
+  color: var(--bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: var(--transition-fast);
+  text-decoration: none;
+}
+
+.btn-secondary,
+.secondary-btn {
+  background: transparent;
+  color: var(--fg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: var(--transition-fast);
+  text-decoration: none;
+}
+
+.btn-generate {
+  flex: 1;
+  font-size: 1.1rem;
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.btn-config {
+  padding: var(--spacing-md);
+  min-width: 120px;
+}
+
+/* Button states */
+.btn:hover:not(:disabled),
+.primary-btn:hover:not(:disabled),
+.secondary-btn:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+.btn-primary:hover,
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled,
+.primary-btn:disabled,
+.secondary-btn:disabled {
+  border-style: dashed;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.btn:active:not(:disabled),
+.primary-btn:active:not(:disabled),
+.secondary-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Specialized buttons */
+.model-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: 0.75rem var(--spacing-md);
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 1rem;
+  transition: var(--transition-fast);
+}
+
+.model-selector-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.remove-model-btn {
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.remove-model-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.examples-btn {
+  position: absolute;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-sm);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 500;
+  transition: var(--transition-fast);
+}
+
+.examples-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+.regenerate-btn,
+.delete-btn {
+  background: none;
+  border: var(--border);
+  color: var(--fg);
+  padding: 0.25rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  transition: var(--transition-fast);
+  opacity: 0.6;
+}
+
+.regenerate-btn:hover,
+.delete-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+  opacity: 1;
+}
+
+.regenerate-btn:disabled,
+.delete-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.delete-btn {
+  margin-left: var(--spacing-sm);
+}
+
+/* Save buttons */
+.save-artwork-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: var(--transition-fast);
+}
+
+.save-artwork-btn:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+.save-artwork-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-artwork-btn.saved {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.save-all-btn {
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.save-all-btn:hover:not(:disabled) {
+  opacity: 0.8;
+  transform: translateY(-2px);
+}
+
+.save-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-all-btn.saved {
+  background: #22c55e;
+  color: white;
+}
+
+/* Floating action button */
+.floating-create-btn {
+  position: fixed;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-xl);
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--fg);
+  color: var(--bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-fast);
+  z-index: var(--z-floating);
+}
+
+.floating-create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  color: var(--bg);
+}
+
+.floating-create-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Close button */
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: var(--bg);
+  padding: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: var(--transition-fast);
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* Button text and loading states */
+.btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.btn-config {
+  padding: var(--spacing-md);
+  min-width: 120px;
+}
+
+/* Button states */
+.btn:hover:not(:disabled),
+.primary-btn:hover:not(:disabled),
+.secondary-btn:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+.btn-primary:hover,
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+.btn:disabled,
+.primary-btn:disabled,
+.secondary-btn:disabled {
+  border-style: dashed;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.btn:active:not(:disabled),
+.primary-btn:active:not(:disabled),
+.secondary-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Specialized buttons */
+.model-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: 0.75rem var(--spacing-md);
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 1rem;
+  transition: var(--transition-fast);
+}
+
+.model-selector-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.remove-model-btn {
+  background: none;
+  border: none;
+  color: var(--fg);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.remove-model-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.examples-btn {
+  position: absolute;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-sm);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 500;
+  transition: var(--transition-fast);
+}
+
+.examples-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+.regenerate-btn,
+.delete-btn {
+  background: none;
+  border: var(--border);
+  color: var(--fg);
+  padding: 0.25rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  transition: var(--transition-fast);
+  opacity: 0.6;
+}
+
+.regenerate-btn:hover,
+.delete-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+  opacity: 1;
+}
+
+.regenerate-btn:disabled,
+.delete-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.delete-btn {
+  margin-left: var(--spacing-sm);
+}
+
+/* Save buttons */
+.save-artwork-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: var(--transition-fast);
+}
+
+.save-artwork-btn:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+  transform: translateY(-1px);
+}
+
+.save-artwork-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-artwork-btn.saved {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.save-all-btn {
+  background: var(--bg);
+  color: var(--fg);
+  border: var(--border);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.save-all-btn:hover:not(:disabled) {
+  opacity: 0.8;
+  transform: translateY(-2px);
+}
+
+.save-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-all-btn.saved {
+  background: #22c55e;
+  color: white;
+}
+
+/* Floating action button */
+.floating-create-btn {
+  position: fixed;
+  bottom: var(--spacing-xl);
+  right: var(--spacing-xl);
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--fg);
+  color: var(--bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition-fast);
+  z-index: var(--z-floating);
+}
+
+.floating-create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  color: var(--bg);
+}
+
+.floating-create-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Close button */
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: var(--bg);
+  padding: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: var(--transition-fast);
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}

@@ -1,0 +1,2 @@
+- [ ] Can you refactor the JS code into multiple files with re-usable components & modules?
+- [ ] Can you refactor the CSS code into multiple files with re-usable classes, component based?

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <style>
+      .pelican-body {
+        fill: #333;
+      }
+      .pelican-beak {
+        fill: #ff8c00;
+      }
+      .pelican-eye {
+        fill: #333;
+      }
+      @media (prefers-color-scheme: dark) {
+        .pelican-body {
+          fill: #fff;
+        }
+        .pelican-eye {
+          fill: #fff;
+        }
+      }
+    </style>
+  </defs>
+
+  <!-- Pelican body -->
+  <path
+    class="pelican-body"
+    d="M8 24c0-2 1-4 3-5 1-1 3-1 4-2 2-2 3-5 5-6 1-1 3-1 4 0 1 1 1 3 0 4-1 2-3 3-4 5-1 1-1 3-2 4-1 2-3 3-5 3-2 0-4-1-5-3z"
+  />
+
+  <!-- Pelican neck and head -->
+  <path
+    class="pelican-body"
+    d="M20 14c1-1 2-3 3-4 1-2 2-3 4-3 2 0 3 1 4 2 1 2 0 4-1 5-1 1-3 2-4 2-1 0-2-1-3-1-1 0-2 0-3-1z"
+  />
+
+  <!-- Pelican beak -->
+  <path class="pelican-beak" d="M26 16c2 0 4 0 5 1 1 1 1 2 0 3-1 1-3 1-5 1-1 0-2-1-2-2 0-1 1-2 2-3z" />
+
+  <!-- Pelican eye -->
+  <circle class="pelican-eye" cx="25" cy="15" r="1" />
+
+  <!-- Pelican wing detail -->
+  <path class="pelican-body" d="M12 20c1-1 3-1 4-1 1 0 2 1 2 2 0 1-1 2-2 2-1 0-3 0-4-1-1-1-1-2 0-2z" />
+</svg>

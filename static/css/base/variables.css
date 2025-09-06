@@ -1,0 +1,57 @@
+/* CSS Custom Properties (Variables) */
+:root {
+  /* Colors - STRICTLY BLACK & WHITE ONLY */
+  --fg: #111;
+  --bg: #fff;
+  --bg-secondary: #f8f8f8;
+  --border: #e5e5e5;
+
+  /* Typography */
+  --font: Helvetica, Arial, sans-serif;
+  --font-h: Helvetica, Arial, sans-serif;
+
+  /* Layout */
+  --main-width: 1920px;
+  --radius: 0px;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Borders */
+  --border-width: 1px;
+  --border-style: solid;
+  --border-color: var(--fg);
+  --border: var(--border-width) var(--border-style) var(--border-color);
+
+  /* Shadows */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.3);
+
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-smooth: 0.3s ease;
+
+  /* Z-indexes */
+  --z-dropdown: 10;
+  --z-modal: 100;
+  --z-floating: 1000;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #fff;
+    --bg: #111;
+    --bg-secondary: #1a1a1a;
+    --border: #333;
+    --shadow-sm: 0 4px 12px rgba(255, 255, 255, 0.1);
+    --shadow-md: 0 6px 20px rgba(255, 255, 255, 0.15);
+  }
+}
