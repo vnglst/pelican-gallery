@@ -9,7 +9,7 @@ install:
 
 # Build the application
 build:
-	GO_ENV=production go build -o bin/server main.go
+	CGO_ENABLED=0 GO_ENV=production go build -o bin/server main.go
 
 # Run the built application
 run: build
@@ -35,7 +35,7 @@ dev-simple:
 	@echo "Starting development server (simple mode)..."
 	@echo "Templates and static files will be read from disk for live updates"
 	@echo "Restart manually for Go code changes"
-	GO_ENV=development go run main.go
+	CGO_ENABLED=0 GO_ENV=development go run main.go
 
 # Clean build artifacts
 clean:
