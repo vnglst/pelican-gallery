@@ -85,6 +85,15 @@
   font-weight: 300;
   margin-bottom: var(--spacing-sm);
   text-align: center;
+  position: sticky;
+  top: 90px; /* Account for sticky category nav */
+  z-index: 40;
+  background: var(--bg);
+  padding: var(--spacing-md) 0;
+  margin: calc(-1 * var(--spacing-md)) 0 var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .artwork-meta-info {
@@ -181,5 +190,12 @@
 
   .artwork-preview {
     height: 420px;
+  }
+}
+
+/* Adjust sticky title position on smaller screens */
+@media (max-width: 768px) {
+  .artwork-title {
+    top: 70px; /* Smaller offset for mobile */
   }
 }
