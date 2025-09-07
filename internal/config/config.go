@@ -120,6 +120,7 @@ func getAllModels() []models.ModelInfo {
 		{ID: "anthropic/claude-sonnet-4", Name: "Anthropic: Claude Sonnet 4", Cost: 3.00},
 		{ID: "anthropic/claude-opus-4", Name: "Anthropic: Claude Opus 4", Cost: 15.00},
 		{ID: "anthropic/claude-opus-4.1", Name: "Anthropic: Claude Opus 4.1", Cost: 15.00},
+		{ID: "openai/gpt-3.5-turbo-0613", Name: "OpenAI: GPT-3.5 Turbo (older v0613)", Cost: 1.50},
 	}
 }
 
