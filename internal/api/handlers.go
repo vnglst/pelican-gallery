@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,14 +19,12 @@ import (
 )
 
 // Handler contains the API handlers
-// Handler contains the API handlers
 type Handler struct {
 	promptConfig *models.PromptConfig
 	db           *database.DB
 	tmpl         *template.Template
 }
 
-// NewHandler creates a new API handler
 // NewHandler creates a new API handler
 func NewHandler(promptConfig *models.PromptConfig, db *database.DB, tmpl *template.Template) *Handler {
 	return &Handler{
@@ -36,27 +34,28 @@ func NewHandler(promptConfig *models.PromptConfig, db *database.DB, tmpl *templa
 	}
 }
 
-// generateSlugFromTitle creates a URL-friendly slug from a title
-func generateSlugFromTitle(title string) string {
-	slug := strings.ToLower(title)
-
-	re := regexp.MustCompile(`[^a-z0-9\s-]`)
-	slug = re.ReplaceAllString(slug, "")
-
-	re = regexp.MustCompile(`[\s-]+`)
-	slug = re.ReplaceAllString(slug, "-")
-
-	slug = strings.Trim(slug, "-")
-
-	if len(slug) > 50 {
-		slug = slug[:50]
-		slug = strings.Trim(slug, "-")
-	}
-
-	return slug
+// jsonError is a simple structured error returned to clients
+type jsonError struct {
+	Message string      `json:"message"`
+	Details interface{} `json:"details,omitempty"`
 }
 
-// isEditingEnabled checks if artwork editing/creating is enabled
+func writeJSON(w http.ResponseWriter, status int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if v != nil {
+		_ = json.NewEncoder(w).Encode(v)
+	}
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string, details ...interface{}) {
+	var det interface{}
+	if len(details) > 0 {
+		det = details[0]
+	}
+	writeJSON(w, status, jsonError{Message: message, Details: det})
+}
+
 // isEditingEnabled checks if artwork editing/creating is enabled
 func isEditingEnabled() bool {
 	return config.IsEditingEnabled()
@@ -65,55 +64,49 @@ func isEditingEnabled() bool {
 // GenerateHandler handles SVG generation requests
 func (h *Handler) GenerateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
 	if !isEditingEnabled() {
 		log.Printf("Generate API access denied: editing is disabled")
-		http.Error(w, "Artwork creation is currently disabled", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "Artwork creation is currently disabled")
 		return
 	}
 
 	var req models.GenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		log.Printf("Error decoding generate request body: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.Prompt == "" {
+		writeJSONError(w, http.StatusBadRequest, "Prompt is required")
+		return
+	}
+
+	if req.Model == "" {
+		writeJSONError(w, http.StatusBadRequest, "Model is required")
+		return
+	}
+
+	if req.Temperature < 0 || req.Temperature > 1 {
+		writeJSONError(w, http.StatusBadRequest, "Temperature must be between 0 and 1")
+		return
+	}
+
+	if req.MaxTokens <= 0 {
+		writeJSONError(w, http.StatusBadRequest, "MaxTokens must be positive")
 		return
 	}
 
 	log.Printf("Generate SVG request: model=%s, prompt length=%d", req.Model, len(req.Prompt))
 
-	// Basic validation - ensure required fields are not empty
-	if req.Prompt == "" {
-		log.Printf("Error: Empty prompt provided")
-		http.Error(w, "Prompt is required", http.StatusBadRequest)
-		return
-	}
-
-	if req.Model == "" {
-		log.Printf("Error: Model is required")
-		http.Error(w, "Model is required", http.StatusBadRequest)
-		return
-	}
-
-	// Set defaults if not provided
-	if req.Temperature == 0 {
-		req.Temperature = config.GetDefaultTemperature()
-	}
-	if req.MaxTokens == 0 {
-		req.MaxTokens = config.GetDefaultMaxTokens()
-	}
-
-	svg, err := h.generateSVG(req.Prompt, req.Model, req.Temperature, req.MaxTokens, req.Reasoning)
+	svg, err := h.generateSVG(req.Prompt, req.Model, req.Temperature, req.MaxTokens)
 	if err != nil {
 		log.Printf("Error generating SVG: %v", err)
-		resp := models.GenerateResponse{
-			Error: err.Error(),
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(resp)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -123,12 +116,11 @@ func (h *Handler) GenerateHandler(w http.ResponseWriter, r *http.Request) {
 		SVG: svg,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, http.StatusOK, resp)
 }
 
 // generateSVG calls the OpenRouter API to generate SVG
-func (h *Handler) generateSVG(prompt, model string, temperature float64, maxTokens int, reasoning *models.Reasoning) (string, error) {
+func (h *Handler) generateSVG(prompt, model string, temperature float64, maxTokens int) (string, error) {
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
 	if apiKey == "" {
 		return "", fmt.Errorf("OPENROUTER_API_KEY environment variable is not set")
@@ -139,10 +131,11 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 	var messages []models.Message
 
 	for _, sysPrompt := range h.promptConfig.SystemPrompts {
-		messages = append(messages, models.Message{
+		message := models.Message{
 			Role:    sysPrompt.Role,
 			Content: sysPrompt.Content,
-		})
+		}
+		messages = append(messages, message)
 	}
 
 	userPrompt := config.FormatUserPrompt(h.promptConfig.UserPromptTemplate, prompt)
@@ -158,7 +151,6 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 		Messages:    messages,
 		Temperature: temperature,
 		MaxTokens:   maxTokens,
-		Reasoning:   reasoning,
 	}
 
 	jsonData, err := json.Marshal(openRouterReq)
@@ -166,19 +158,19 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	log.Printf("Request payload size: %d bytes", len(jsonData))
-
 	req, err := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
+
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("HTTP-Referer", "http://localhost:8080")
 	req.Header.Set("X-Title", "Pelican Art Gallery")
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 300 * time.Second, // 5 minutes
+	}
 	log.Printf("Making request to OpenRouter API...")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -193,21 +185,19 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
-	log.Printf("Response body size: %d bytes", len(body))
-
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("OpenRouter API error response: %s", string(body))
+		log.Printf("OpenRouter API error (status %d): %s", resp.StatusCode, string(body))
 		return "", fmt.Errorf("OpenRouter API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var openRouterResp models.OpenRouterResponse
 	if err := json.Unmarshal(body, &openRouterResp); err != nil {
-		log.Printf("Failed to parse OpenRouter response: %s", string(body))
-		return "", fmt.Errorf("failed to parse response: %w (body: %s)", err, string(body))
+		log.Printf("Failed to parse OpenRouter response")
+		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if openRouterResp.Error != nil {
-		log.Printf("OpenRouter API error: %+v", openRouterResp.Error)
+		log.Printf("OpenRouter API error: %s", openRouterResp.Error.Message)
 		return "", fmt.Errorf("OpenRouter API error: %s", openRouterResp.Error.Message)
 	}
 
@@ -219,222 +209,379 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 	log.Printf("Received %d choices from OpenRouter", len(openRouterResp.Choices))
 
 	svgContent := strings.TrimSpace(openRouterResp.Choices[0].Message.Content)
-
-	svgContent = strings.ReplaceAll(svgContent, "```svg", "")
-	svgContent = strings.ReplaceAll(svgContent, "```", "")
-	svgContent = strings.TrimSpace(svgContent)
-
-	log.Printf("Cleaned SVG content length: %d characters", len(svgContent))
+	log.Printf("Raw OpenRouter response content length: %d", len(svgContent))
 
 	return svgContent, nil
 }
 
-// SaveArtworkHandler handles requests to save artwork to the database
-func (h *Handler) SaveArtworkHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if !isEditingEnabled() {
-		log.Printf("Save artwork API access denied: editing is disabled")
-		http.Error(w, "Artwork creation is currently disabled", http.StatusForbidden)
-		return
-	}
-
-	var req models.SaveArtworkRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding save artwork request: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	log.Printf("Save artwork request: title=%s, model=%s", req.Title, req.Model)
-
-	if req.Title == "" {
-		http.Error(w, "Title is required", http.StatusBadRequest)
-		return
-	}
-
-	if req.SVGContent == "" {
-		http.Error(w, "SVG content is required", http.StatusBadRequest)
-		return
-	}
-
-	slug := generateSlugFromTitle(req.Title)
-	if req.Slug != "" {
-		slug = req.Slug
-	}
-
-	artwork := models.Artwork{
-		Title:       req.Title,
-		Slug:        slug,
-		Category:    req.Category,
-		Prompt:      req.Prompt,
-		Model:       req.Model,
-		SVGContent:  req.SVGContent,
-		Temperature: req.Temperature,
-		MaxTokens:   req.MaxTokens,
-		CreatedAt:   time.Now(),
-	}
-
-	log.Printf("Attempting to save artwork: slug=%s, model=%s, title=%s", artwork.Slug, artwork.Model, artwork.Title)
-	if err := h.db.SaveArtwork(artwork); err != nil {
-		log.Printf("Failed to save artwork to database: %v", err)
-		resp := models.SaveArtworkResponse{
-			Error: "Failed to save artwork to database",
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(resp)
-		return
-	}
-
-	log.Printf("Artwork saved successfully for slug: %s, model: %s", artwork.Slug, artwork.Model)
-
-	resp := models.SaveArtworkResponse{
-		ID:      artwork.ID,
-		Message: "Artwork saved successfully",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-}
-
-// RegenerateArtworkHandler handles requests to regenerate an existing artwork
-func (h *Handler) RegenerateArtworkHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if !isEditingEnabled() {
-		log.Printf("Regenerate artwork API access denied: editing is disabled")
-		http.Error(w, "Artwork creation is currently disabled", http.StatusForbidden)
-		return
-	}
-
-	var req struct {
-		Slug  string `json:"slug"`
-		Model string `json:"model"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding regenerate request: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	if req.Slug == "" {
-		http.Error(w, "Slug is required", http.StatusBadRequest)
-		return
-	}
-
-	if req.Model == "" {
-		http.Error(w, "Model is required", http.StatusBadRequest)
-		return
-	}
-
-	artworks, err := h.db.GetArtworksBySlug(req.Slug)
-	if err != nil {
-		log.Printf("Error fetching artworks for slug %s: %v", req.Slug, err)
-		http.Error(w, "Failed to fetch artwork", http.StatusInternalServerError)
-		return
-	}
-
-	var existingArtwork *models.Artwork
-	for _, artwork := range artworks {
-		if artwork.Model == req.Model {
-			existingArtwork = &artwork
-			break
-		}
-	}
-
-	if existingArtwork == nil {
-		http.Error(w, "Artwork not found", http.StatusNotFound)
-		return
-	}
-
-	svg, err := h.generateSVG(existingArtwork.Prompt, existingArtwork.Model, existingArtwork.Temperature, existingArtwork.MaxTokens, nil)
-	if err != nil {
-		log.Printf("Error generating artwork: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	updatedArtwork := models.Artwork{
-		Slug:        existingArtwork.Slug,
-		Category:    existingArtwork.Category,
-		Prompt:      existingArtwork.Prompt,
-		Model:       existingArtwork.Model,
-		SVGContent:  svg,
-		Temperature: existingArtwork.Temperature,
-		MaxTokens:   existingArtwork.MaxTokens,
-		CreatedAt:   time.Now(),
-	}
-
-	if err := h.db.SaveArtwork(updatedArtwork); err != nil {
-		log.Printf("Failed to save regenerated artwork: %v", err)
-		http.Error(w, "Failed to save regenerated artwork", http.StatusInternalServerError)
-		return
-	}
-
-	log.Printf("Artwork regenerated successfully for slug: %s, model: %s", req.Slug, req.Model)
-
-	resp := struct {
-		SVGContent string `json:"svgContent"`
-		Message    string `json:"message"`
-	}{
-		SVGContent: svg,
-		Message:    "Artwork regenerated successfully",
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-}
-
 // DeleteArtworkHandler handles artwork deletion requests
-func (h *Handler) DeleteArtworkHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
+func (h *Handler) DeleteArtworkHandler(w http.ResponseWriter, r *http.Request, artworkIDStr string) {
 	if !isEditingEnabled() {
-		log.Printf("Delete artwork API access denied: editing is disabled")
-		http.Error(w, "Artwork editing is currently disabled", http.StatusForbidden)
+		writeJSONError(w, http.StatusForbidden, "Artwork editing is currently disabled")
 		return
 	}
 
-	var req struct {
-		ID int `json:"id"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	artworkID, err := strconv.Atoi(artworkIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid artwork ID")
 		return
 	}
 
-	log.Printf("Delete artwork request: ID=%d", req.ID)
+	log.Printf("Delete artwork request: ID=%d", artworkID)
 
-	if err := h.db.DeleteArtwork(req.ID); err != nil {
-		log.Printf("Error deleting artwork: %v", err)
-		http.Error(w, "Failed to delete artwork", http.StatusInternalServerError)
+	if err := h.db.DeleteArtwork(artworkID); err != nil {
+		log.Printf("Error deleting artwork (id=%d): %v", artworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to delete artwork")
 		return
 	}
 
-	log.Printf("Successfully deleted artwork with ID: %d", req.ID)
+	log.Printf("Successfully deleted artwork with ID: %d", artworkID)
 
-	w.Header().Set("Content-Type", "application/json")
 	response := map[string]interface{}{
 		"success": true,
 		"message": "Artwork deleted successfully",
 	}
+	writeJSON(w, http.StatusOK, response)
+}
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Error encoding response: %v", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+// ListGroupsHandler handles GET /api/groups
+func (h *Handler) ListGroupsHandler(w http.ResponseWriter, r *http.Request) {
+	groups, err := h.db.ListGroups()
+	if err != nil {
+		log.Printf("Error listing groups: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to list groups")
 		return
 	}
+	writeJSON(w, http.StatusOK, groups)
+}
+
+// CreateGroupHandler handles POST /api/groups
+func (h *Handler) CreateGroupHandler(w http.ResponseWriter, r *http.Request) {
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork creation is currently disabled")
+		return
+	}
+
+	var req struct {
+		Title       string `json:"title"`
+		Prompt      string `json:"prompt"`
+		Category    string `json:"category"`
+		OriginalURL string `json:"original_url"`
+		ArtistName  string `json:"artist_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("CreateGroup invalid body: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.Title == "" || req.Prompt == "" {
+		writeJSONError(w, http.StatusBadRequest, "Title and prompt are required")
+		return
+	}
+
+	group := models.ArtworkGroup{
+		Title:       req.Title,
+		Prompt:      req.Prompt,
+		Category:    req.Category,
+		OriginalURL: req.OriginalURL,
+		ArtistName:  req.ArtistName,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+
+	id, err := h.db.CreateGroup(group)
+	if err != nil {
+		log.Printf("Error creating group: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to create group")
+		return
+	}
+
+	group.ID = id
+	writeJSON(w, http.StatusCreated, group)
+}
+
+// UpdateGroupHandler handles PUT /api/groups/{id}
+func (h *Handler) UpdateGroupHandler(w http.ResponseWriter, r *http.Request, groupIDStr string) {
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork editing is currently disabled")
+		return
+	}
+
+	groupID, err := strconv.Atoi(groupIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid group ID")
+		return
+	}
+
+	var req struct {
+		Title       string `json:"title"`
+		Prompt      string `json:"prompt"`
+		Category    string `json:"category"`
+		OriginalURL string `json:"original_url"`
+		ArtistName  string `json:"artist_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("UpdateGroup invalid body: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.Title == "" || req.Prompt == "" {
+		writeJSONError(w, http.StatusBadRequest, "Title and prompt are required")
+		return
+	}
+
+	group := models.ArtworkGroup{
+		ID:          groupID,
+		Title:       req.Title,
+		Prompt:      req.Prompt,
+		Category:    req.Category,
+		OriginalURL: req.OriginalURL,
+		ArtistName:  req.ArtistName,
+		UpdatedAt:   time.Now(),
+	}
+
+	if err := h.db.UpdateGroup(group); err != nil {
+		log.Printf("Error updating group (id=%d): %v", groupID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to update group")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, group)
+}
+
+// DeleteGroupHandler handles DELETE /api/groups/{id}
+func (h *Handler) DeleteGroupHandler(w http.ResponseWriter, r *http.Request, groupIDStr string) {
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork editing is currently disabled")
+		return
+	}
+
+	groupID, err := strconv.Atoi(groupIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid group ID")
+		return
+	}
+
+	log.Printf("Delete group request: ID=%d", groupID)
+
+	if err := h.db.DeleteGroup(groupID); err != nil {
+		log.Printf("Error deleting group (id=%d): %v", groupID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to delete group")
+		return
+	}
+
+	log.Printf("Successfully deleted group with ID: %d (cascaded to all artworks)", groupID)
+
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Group and all associated artworks deleted successfully",
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+// GetGroupHandler handles GET /api/groups/{id}
+func (h *Handler) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimPrefix(r.URL.Path, "/api/groups/")
+	idStr := strings.TrimSuffix(path, "/")
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid group ID")
+		return
+	}
+
+	group, err := h.db.GetGroup(id)
+	if err != nil {
+		log.Printf("Error getting group: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to get group")
+		return
+	}
+
+	artworks, err := h.db.ListArtworksByGroup(id)
+	if err != nil {
+		log.Printf("Error listing artworks: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to list artworks")
+		return
+	}
+
+	response := struct {
+		Group    *models.ArtworkGroup `json:"group"`
+		Artworks []models.Artwork     `json:"artworks"`
+	}{
+		Group:    group,
+		Artworks: artworks,
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+// CreateArtworkHandler handles POST /api/artworks
+func (h *Handler) CreateArtworkHandler(w http.ResponseWriter, r *http.Request) {
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork creation is currently disabled")
+		return
+	}
+
+	var req struct {
+		GroupID int    `json:"group_id"`
+		Model   string `json:"model"`
+		Params  string `json:"params"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("CreateArtwork invalid body: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.GroupID == 0 || req.Model == "" {
+		writeJSONError(w, http.StatusBadRequest, "Group ID and model are required")
+		return
+	}
+
+	artwork := models.Artwork{
+		GroupID:   req.GroupID,
+		Model:     req.Model,
+		Params:    req.Params,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	id, err := h.db.CreateArtwork(artwork)
+	if err != nil {
+		log.Printf("Error creating artwork (group_id=%d, model=%s): %v", req.GroupID, req.Model, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to create artwork")
+		return
+	}
+
+	artwork.ID = id
+	writeJSON(w, http.StatusCreated, artwork)
+}
+
+// UpdateArtworkHandler handles PATCH /api/artworks/{id}
+func (h *Handler) UpdateArtworkHandler(w http.ResponseWriter, r *http.Request, artworkIDStr string) {
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork editing is currently disabled")
+		return
+	}
+
+	artworkID, err := strconv.Atoi(artworkIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid artwork ID")
+		return
+	}
+
+	var req struct {
+		Params string `json:"params"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("UpdateArtwork invalid body: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := h.db.UpdateArtworkParams(artworkID, req.Params); err != nil {
+		log.Printf("Error updating artwork (id=%d): %v", artworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to update artwork")
+		return
+	}
+
+	artwork, err := h.db.GetArtwork(artworkID)
+	if err != nil {
+		log.Printf("Error getting updated artwork (id=%d): %v", artworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to get updated artwork")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, artwork)
+}
+
+// GenerateArtworkHandler handles POST /api/generate
+func (h *Handler) GenerateArtworkHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork creation is currently disabled")
+		return
+	}
+
+	var req struct {
+		ArtworkID int `json:"artwork_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("GenerateArtwork invalid body: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if req.ArtworkID == 0 {
+		writeJSONError(w, http.StatusBadRequest, "Artwork ID is required")
+		return
+	}
+
+	artwork, err := h.db.GetArtwork(req.ArtworkID)
+	if err != nil {
+		log.Printf("Error getting artwork (id=%d): %v", req.ArtworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to get artwork")
+		return
+	}
+
+	group, err := h.db.GetGroup(artwork.GroupID)
+	if err != nil {
+		log.Printf("Error getting group (id=%d for artwork=%d): %v", artwork.GroupID, req.ArtworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to get group")
+		return
+	}
+
+	// Parse params
+	var params models.Params
+	if err := json.Unmarshal([]byte(artwork.Params), &params); err != nil {
+		log.Printf("Error parsing artwork params (id=%d): %v", req.ArtworkID, err)
+		writeJSONError(w, http.StatusBadRequest, "Invalid artwork parameters")
+		return
+	}
+
+	svg, err := h.generateSVG(group.Prompt, artwork.Model, params.Temperature, params.MaxTokens)
+	if err != nil {
+		log.Printf("Error generating SVG for artwork %d: %v", req.ArtworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	log.Printf("Generated SVG for artwork %d: length=%d characters", req.ArtworkID, len(svg))
+
+	if err := h.db.SaveArtworkSVG(req.ArtworkID, svg); err != nil {
+		log.Printf("Error saving SVG (artwork=%d): %v", req.ArtworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to save SVG")
+		return
+	}
+
+	log.Printf("Successfully saved SVG for artwork %d to database", req.ArtworkID)
+
+	response := struct {
+		ID  int    `json:"id"`
+		SVG string `json:"svg"`
+	}{
+		ID:  req.ArtworkID,
+		SVG: svg,
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+// ListModelsHandler handles GET /api/models
+func (h *Handler) ListModelsHandler(w http.ResponseWriter, r *http.Request) {
+	models := config.GetAvailableModels()
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"models": models,
+	})
 }

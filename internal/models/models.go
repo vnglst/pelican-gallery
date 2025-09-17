@@ -16,37 +16,43 @@ type SystemPrompt struct {
 	Content string `yaml:"content"`
 }
 
-// Artwork represents a stored artwork in the database
-type Artwork struct {
+// ArtworkGroup represents a group of artworks with the same prompt
+type ArtworkGroup struct {
 	ID          int       `db:"id" json:"id"`
 	Title       string    `db:"title" json:"title"`
-	Slug        string    `db:"slug" json:"slug"`
-	Category    string    `db:"category" json:"category"`
 	Prompt      string    `db:"prompt" json:"prompt"`
-	Model       string    `db:"model" json:"model"`
-	SVGContent  string    `db:"svg_content" json:"svg_content"`
-	Temperature float64   `db:"temperature" json:"temperature"`
-	MaxTokens   int       `db:"max_tokens" json:"max_tokens"`
+	Category    string    `db:"category" json:"category"`
+	OriginalURL string    `db:"original_url" json:"original_url"`
+	ArtistName  string    `db:"artist_name" json:"artist_name"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+}
+
+// Artwork represents an individual artwork within a group
+type Artwork struct {
+	ID        int       `db:"id" json:"id"`
+	GroupID   int       `db:"group_id" json:"group_id"`
+	Model     string    `db:"model" json:"model"`
+	Params    string    `db:"params_json" json:"params"` // JSON string for parameters
+	SVG       string    `db:"svg" json:"svg"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+}
+
+// Params represents the parameters for an artwork
+type Params struct {
+	Temperature float64 `json:"temperature"`
+	MaxTokens   int     `json:"max_tokens"`
 }
 
 // GenerateRequest represents the request for generating SVG
 type GenerateRequest struct {
-	Title       string     `json:"title,omitempty"`
-	Prompt      string     `json:"prompt"`
-	Model       string     `json:"model"`
-	Slug        string     `json:"slug,omitempty"`
-	Category    string     `json:"category,omitempty"`
-	Temperature float64    `json:"temperature,omitempty"`
-	MaxTokens   int        `json:"max_tokens,omitempty"`
-	Reasoning   *Reasoning `json:"reasoning,omitempty"`
-}
-
-// Reasoning represents reasoning configuration for models that support it
-type Reasoning struct {
-	Enabled bool   `json:"enabled,omitempty"`
-	Effort  string `json:"effort,omitempty"`  // "high", "medium", "low" for OpenAI-style
-	Exclude bool   `json:"exclude,omitempty"` // Exclude reasoning tokens from response
+	Title       string  `json:"title,omitempty"`
+	Prompt      string  `json:"prompt"`
+	Model       string  `json:"model"`
+	Category    string  `json:"category,omitempty"`
+	Temperature float64 `json:"temperature,omitempty"`
+	MaxTokens   int     `json:"max_tokens,omitempty"`
 }
 
 // GenerateResponse represents the response with generated SVG
@@ -58,7 +64,6 @@ type GenerateResponse struct {
 // SaveArtworkRequest represents the request for saving an artwork
 type SaveArtworkRequest struct {
 	Title       string  `json:"title"`
-	Slug        string  `json:"slug"`
 	Category    string  `json:"category"`
 	Prompt      string  `json:"prompt"`
 	Model       string  `json:"model"`
@@ -89,25 +94,18 @@ type PromptExample struct {
 	Prompt   string `json:"prompt"`
 }
 
-// TemplateData represents all the data needed to render the index template
+// TemplateData represents all the data needed to render template
 type TemplateData struct {
-	Models           []ModelInfo     `json:"models"`
-	Examples         []PromptExample `json:"examples"`
-	DefaultTemp      float64         `json:"default_temp"`
-	DefaultMaxTokens int             `json:"default_max_tokens"`
-	DefaultModels    []string        `json:"default_models"`
-	ReasoningEnabled bool            `json:"reasoning_enabled"`
-	ReasoningEffort  string          `json:"reasoning_effort"`
-	EditingEnabled   bool            `json:"editing_enabled"`
+	Models         []ModelInfo `json:"models"`
+	EditingEnabled bool        `json:"editing_enabled"`
 }
 
 // OpenRouterRequest represents the request to OpenRouter API
 type OpenRouterRequest struct {
-	Model       string     `json:"model"`
-	Messages    []Message  `json:"messages"`
-	Temperature float64    `json:"temperature"`
-	MaxTokens   int        `json:"max_tokens"`
-	Reasoning   *Reasoning `json:"reasoning,omitempty"`
+	Model       string    `json:"model"`
+	Messages    []Message `json:"messages"`
+	Temperature float64   `json:"temperature"`
+	MaxTokens   int       `json:"max_tokens"`
 }
 
 // Message represents a message in the OpenRouter request

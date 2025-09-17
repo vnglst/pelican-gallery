@@ -48,26 +48,6 @@ func GetAvailableModels() []models.ModelInfo {
 	return allModels
 }
 
-// GetDefaultTemperature returns the default temperature for generation
-func GetDefaultTemperature() float64 {
-	return 0.5
-}
-
-// GetDefaultMaxTokens returns the default max tokens for generation
-func GetDefaultMaxTokens() int {
-	return 30_000
-}
-
-// GetDefaultReasoningEnabled returns the default reasoning enabled state
-func GetDefaultReasoningEnabled() bool {
-	return false
-}
-
-// GetDefaultReasoningEffort returns the default reasoning effort level
-func GetDefaultReasoningEffort() string {
-	return "medium"
-}
-
 // IsEditingEnabled checks if artwork editing/creating is enabled
 func IsEditingEnabled() bool {
 	// Check if editing is explicitly enabled (defaults to false if not set)
@@ -106,65 +86,25 @@ func getAllModels() []models.ModelInfo {
 		{ID: "google/gemini-2.0-flash-001", Name: "Google: Gemini 2.0 Flash", Cost: 0.40},
 		{ID: "google/gemini-2.5-flash-lite", Name: "Google: Gemini 2.5 Flash Lite", Cost: 0.40},
 		{ID: "google/gemini-2.5-flash-lite-preview-06-17", Name: "Google: Gemini 2.5 Flash Lite Preview 06-17", Cost: 0.40},
+		{ID: "openai/gpt-5-mini", Name: "OpenAI: GPT-5 Mini", Cost: 2.00},
 		{ID: "anthropic/claude-3.5-haiku", Name: "Anthropic: Claude 3.5 Haiku", Cost: 0.80},
 		{ID: "deepseek/deepseek-chat-v3-0324", Name: "DeepSeek: DeepSeek V3 0324", Cost: 0.80},
 		{ID: "deepseek/deepseek-chat-v3.1", Name: "DeepSeek: DeepSeek V3.1", Cost: 0.80},
 		{ID: "qwen/qwen3-coder", Name: "Qwen: Qwen3 Coder 480B A35B", Cost: 0.80},
 		{ID: "deepseek/deepseek-r1-0528", Name: "DeepSeek: R1 0528", Cost: 0.80},
+		{ID: "openai/gpt-4.1", Name: "OpenAI: GPT-4.1", Cost: 8.00},
 		{ID: "openai/gpt-5", Name: "OpenAI: GPT-5", Cost: 1.25},
+		{ID: "openai/gpt-4o-2024-11-20", Name: "OpenAI: GPT-4o 2024-11-20", Cost: 10.00},
+		{ID: "google/gemini-2.5-pro", Name: "Google: Gemini 2.5 Pro", Cost: 10.00},
 		{ID: "z-ai/glm-4.5", Name: "Z.AI: GLM 4.5", Cost: 1.32},
 		{ID: "moonshotai/kimi-k2", Name: "MoonshotAI: Kimi K2", Cost: 2.49},
 		{ID: "google/gemini-2.5-flash", Name: "Google: Gemini 2.5 Flash", Cost: 2.50},
 		{ID: "anthropic/claude-3.7-sonnet", Name: "Anthropic: Claude 3.7 Sonnet", Cost: 3.00},
 		{ID: "x-ai/grok-4", Name: "xAI: Grok 4", Cost: 3.00},
 		{ID: "anthropic/claude-sonnet-4", Name: "Anthropic: Claude Sonnet 4", Cost: 3.00},
+		{ID: "openai/gpt-4-turbo", Name: "OpenAI: GPT-4 Turbo", Cost: 30.00},
 		{ID: "anthropic/claude-opus-4", Name: "Anthropic: Claude Opus 4", Cost: 15.00},
 		{ID: "anthropic/claude-opus-4.1", Name: "Anthropic: Claude Opus 4.1", Cost: 15.00},
 		{ID: "openai/gpt-3.5-turbo-0613", Name: "OpenAI: GPT-3.5 Turbo (older v0613)", Cost: 1.50},
-	}
-}
-
-// GetExamplePrompts returns a list of example prompts for users
-func GetExamplePrompts() []models.PromptExample {
-	return []models.PromptExample{
-		{
-			Title:    "The Night Watch",
-			Category: "classic",
-			Prompt:   "The Night Watch. Rembrandt. A group portrait of Amsterdam militiamen led by Captain Frans Banning Cocq and Lieutenant Willem van Ruytenburch, stepping out from a gateway. The scene includes officers, a drummer, a girl with a chicken, and a barking dog, set in dramatic lighting.",
-		},
-		{
-			Title:    "Het Melkmeisje",
-			Category: "classic",
-			Prompt:   "Het Melkmeisje. Johannes Vermeer. A kitchen maid stands behind a table, pouring milk from a jug into a cooking pot. On the table are a basket of bread and a stone jug; to the left, a window with a wicker basket and a copper pot. At the bottom right, a row of tiles and a small stove on the wall.",
-		},
-		{
-			Title:    "Dutch Maritime Scene",
-			Category: "classic",
-			Prompt:   "A fleet of ships at anchor, greeting a government barge with salutes. Calm water reflects the boats and a dramatic cloudscape fills the sky.",
-		},
-		{
-			Title:    "Geometric Landscape",
-			Category: "modern",
-			Prompt:   "A mountain landscape with angular peaks, geometric patterns, and a stylized sun. Bold colors and sharp shapes.",
-		},
-		{
-			Title:    "Art Deco Architecture",
-			Category: "modern",
-			Prompt:   "An Art Deco skyscraper with symmetrical facade, sunburst patterns, zigzags, and metallic colors.",
-		},
-		{
-			Title:    "Botanical Illustration",
-			Category: "nature",
-			Prompt:   "Detailed illustration of exotic flowering plants with precise linework, leaf structures, and natural colors.",
-		},
-		{
-			Title:    "Abstract Composition",
-			Category: "abstract",
-			Prompt:   "Flowing organic shapes and curves, overlapping forms, limited color palette, and transparent elements.",
-		},
-		{
-			Title:  "Minimalist Icon",
-			Prompt: "A minimalist icon of growth, using simple geometric shapes like an upward arrow or sprouting plant.",
-		},
 	}
 }

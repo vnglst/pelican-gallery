@@ -25,7 +25,6 @@ import (
 )
 
 // RateLimiter implements a simple in-memory rate limiter
-// RateLimiter implements a simple in-memory rate limiter
 type RateLimiter struct {
 	mu       sync.RWMutex
 	requests map[string][]time.Time
@@ -104,12 +103,10 @@ var staticFiles embed.FS
 var templateFiles embed.FS
 
 // isDevelopment checks if we're running in development mode
-// isDevelopment checks if we're running in development mode
 func isDevelopment() bool {
 	return os.Getenv("GO_ENV") != "production"
 }
 
-// getStaticFS returns the appropriate file system for static files
 // getStaticFS returns the appropriate file system for static files
 func getStaticFS() http.FileSystem {
 	if isDevelopment() {
@@ -122,7 +119,6 @@ func getStaticFS() http.FileSystem {
 	return http.FS(staticFS)
 }
 
-// parseTemplates returns the appropriate template for the environment
 // parseTemplates returns the appropriate template for the environment
 func parseTemplates() (*template.Template, error) {
 	// Create template with custom functions
@@ -145,7 +141,16 @@ func parseTemplates() (*template.Template, error) {
 	return tmpl.ParseFS(templateFiles, "templates/*.html")
 }
 
-// getModelDisplayName returns the display name for a model ID
+// getTemplates returns templates, re-parsing in development mode for hot reload
+func getTemplates(cachedTemplate *template.Template) (*template.Template, error) {
+	if isDevelopment() {
+		// Always re-parse templates in development for hot reload
+		return parseTemplates()
+	}
+	// Use cached templates in production
+	return cachedTemplate, nil
+}
+
 // getModelDisplayName returns the display name for a model ID
 func getModelDisplayName(modelID string) string {
 	allModels := config.GetAvailableModels()
@@ -158,7 +163,6 @@ func getModelDisplayName(modelID string) string {
 	return modelID
 }
 
-// loggingMiddleware logs all HTTP requests
 // loggingMiddleware logs all HTTP requests
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +183,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// responseWriter wrapper to capture status code
 // responseWriter wrapper to capture status code
 type responseWriter struct {
 	http.ResponseWriter
@@ -207,13 +210,23 @@ func main() {
 		dbPath = "artworks.db"
 	}
 
-	db, err := database.New(dbPath)
-	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+	var db *database.DB
+	var err error
+	if !config.IsEditingEnabled() {
+		// Open database in read-only mode
+		db, err = database.New("file:" + dbPath + "?mode=ro")
+		if err != nil {
+			log.Fatalf("Failed to open database in read-only mode: %v", err)
+		}
+		log.Printf("Database opened in read-only mode at: %s", dbPath)
+	} else {
+		db, err = database.New(dbPath)
+		if err != nil {
+			log.Fatalf("Failed to initialize database: %v", err)
+		}
+		log.Printf("Database initialized in write mode at: %s", dbPath)
 	}
 	defer db.Close()
-
-	log.Printf("Database initialized at: %s", dbPath)
 
 	promptConfig, err := config.LoadPromptConfig("config/prompt.yaml")
 	if err != nil {
@@ -226,34 +239,34 @@ func main() {
 	}
 
 	templateData := models.TemplateData{
-		Models:           config.GetAvailableModels(),
-		Examples:         config.GetExamplePrompts(),
-		DefaultTemp:      config.GetDefaultTemperature(),
-		DefaultMaxTokens: config.GetDefaultMaxTokens(),
-		DefaultModels:    config.GetDefaultModels(),
-		ReasoningEnabled: config.GetDefaultReasoningEnabled(),
-		ReasoningEffort:  config.GetDefaultReasoningEffort(),
-		EditingEnabled:   config.IsEditingEnabled(),
+		Models:         config.GetAvailableModels(),
+		EditingEnabled: config.IsEditingEnabled(),
 	}
 
 	apiHandler := api.NewHandler(promptConfig, db, tmpl)
 
-	pageHandler := pages.NewPageHandler(db, tmpl, templateData)
+	pageHandler := pages.NewPageHandler(db, tmpl, templateData, getTemplates)
 
 	rateLimiter := NewRateLimiter(time.Minute, 100)
 
 	mux := http.NewServeMux()
 
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(getStaticFS())))
+	// Static file handler
+	staticHandler := http.StripPrefix("/static/", http.FileServer(getStaticFS()))
+	mux.Handle("/static/", staticHandler)
 
 	mux.HandleFunc("/", pageHandler.HomepageHandler)
 	mux.HandleFunc("/workshop", pageHandler.WorkshopHandler)
+	mux.HandleFunc("/gallery", func(w http.ResponseWriter, r *http.Request) {
+		// Redirect /gallery to /gallery/ for consistency
+		http.Redirect(w, r, "/gallery/", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("/gallery/", func(w http.ResponseWriter, r *http.Request) {
 		// Extract category from path: /gallery/category/nature -> "nature"
 		path := r.URL.Path
 		category := ""
 
-		if path != "/gallery" && path != "/gallery/" {
+		if path != "/gallery/" && path != "/gallery" {
 			// Check if it's a category path
 			if strings.HasPrefix(path, "/gallery/category/") {
 				category = strings.TrimPrefix(path, "/gallery/category/")
@@ -268,14 +281,69 @@ func main() {
 			}
 		}
 
-		r.URL.RawQuery = r.URL.RawQuery + "&category=" + url.QueryEscape(category)
+		// Add category to query parameters
+		if category != "" {
+			q := r.URL.Query()
+			q.Set("category", category)
+			r.URL.RawQuery = q.Encode()
+		}
+
 		pageHandler.GalleryHandler(w, r)
 	})
 
-	mux.HandleFunc("/api/generate", rateLimiter.Middleware(apiHandler.GenerateHandler))
-	mux.HandleFunc("/api/save-artwork", rateLimiter.Middleware(apiHandler.SaveArtworkHandler))
-	mux.HandleFunc("/api/regenerate-artwork", rateLimiter.Middleware(apiHandler.RegenerateArtworkHandler))
-	mux.HandleFunc("/api/delete-artwork", rateLimiter.Middleware(apiHandler.DeleteArtworkHandler))
+	mux.HandleFunc("/api/generate", rateLimiter.Middleware(apiHandler.GenerateArtworkHandler))
+	// mux.HandleFunc("/api/save-artwork", rateLimiter.Middleware(apiHandler.SaveArtworkHandler))
+	// mux.HandleFunc("/api/regenerate-artwork", rateLimiter.Middleware(apiHandler.RegenerateArtworkHandler))
+	mux.HandleFunc("/api/delete-artwork/", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
+		// Extract ID from path
+		path := strings.TrimPrefix(r.URL.Path, "/api/delete-artwork/")
+		apiHandler.DeleteArtworkHandler(w, r, path)
+	}))
+	mux.HandleFunc("/api/models", rateLimiter.Middleware(apiHandler.ListModelsHandler))
+
+	// Group endpoints
+	mux.HandleFunc("/api/groups", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			apiHandler.ListGroupsHandler(w, r)
+		} else if r.Method == http.MethodPost {
+			apiHandler.CreateGroupHandler(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+	mux.HandleFunc("/api/groups/", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/groups/")
+		idStr := strings.TrimSuffix(path, "/")
+
+		if r.Method == http.MethodGet {
+			apiHandler.GetGroupHandler(w, r)
+		} else if r.Method == http.MethodPut {
+			apiHandler.UpdateGroupHandler(w, r, idStr)
+		} else if r.Method == http.MethodDelete {
+			apiHandler.DeleteGroupHandler(w, r, idStr)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
+	// Artwork endpoints
+	mux.HandleFunc("/api/artworks", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			apiHandler.CreateArtworkHandler(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+	mux.HandleFunc("/api/artworks/", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPatch {
+			// Extract ID from path
+			path := strings.TrimPrefix(r.URL.Path, "/api/artworks/")
+			idStr := strings.TrimSuffix(path, "/")
+			apiHandler.UpdateArtworkHandler(w, r, idStr)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

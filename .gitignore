@@ -40,3 +40,6 @@ Thumbs.db
 # Log files
 *.log
 tmp/*
+
+# Generated CSS
+static/css/output.css

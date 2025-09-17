@@ -5,45 +5,102 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{.Title}}</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-    <link rel="stylesheet" href="/static/css/main.css" />
+    <link rel="stylesheet" href="/static/css/output.css" />
   </head>
-  <body>
-    <div class="container">
-      <header class="gallery-header">
-        <nav class="gallery-nav">
-          <h1><a href="/" class="gallery-title-link">Pelican Art Gallery</a></h1>
+  <body class="bg-bg text-fg font-sans antialiased min-h-screen">
+    <div class="min-h-screen flex flex-col">
+      <header class="w-full max-w-6xl mx-auto px-12 py-16">
+        <nav class="text-center">
+          <h1>
+            <a href="/" class="text-3xl md:text-4xl font-light">Pelican Art Gallery</a>
+          </h1>
         </nav>
       </header>
 
       {{if .Categories}}
-      <nav class="category-nav">
-        <div class="category-nav-container">
-          <a href="/gallery" class="category-link {{if not $.Category}}active{{end}}">all</a>
-          {{range .Categories}}
-          <a href="/gallery/category/{{.}}" class="category-link {{if eq $.Category .}}active{{end}}">{{.}}</a>
-          {{end}}
+      <nav class="sticky top-0 z-20 w-full bg-bg border-b border-border">
+        <div class="w-full max-w-6xl mx-auto px-12 py-4">
+          <div class="overflow-x-auto scrollbar-hide">
+            <div class="flex gap-3 justify-center w-max min-w-full mx-auto">
+              {{range .Categories}}
+              <a
+                href="/gallery/category/{{.}}"
+                class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out {{if eq $.Category .}}bg-fg text-bg font-bold{{else}}hover:bg-fg hover:text-bg{{end}}"
+              >
+                {{.}}
+              </a>
+              {{end}}
+            </div>
+          </div>
         </div>
       </nav>
       {{end}}
 
-      <main class="gallery-container">
+      <main class="flex-1 w-full max-w-6xl mx-auto px-6 pb-12">
         {{if .Groups}}
-        <div class="artworks-grid">
+        <div class="space-y-0">
           {{range .Groups}}
-          <div class="artwork-group">
-            <h2 class="artwork-title">{{.Title}}</h2>
-            {{if $.EditingEnabled}}
-            <div class="artwork-meta-info">
-              <a href="/workshop?edit={{.Slug}}" class="edit-artwork-btn">Edit</a>
+          <div class="space-y-0">
+            <div class="sticky top-16 z-10 bg-bg py-6 px-6">
+              <div class="flex items-center justify-center gap-4">
+                <h2 class="text-xl md:text-2xl font-light">{{.Title}}</h2>
+                {{if $.EditingEnabled}}
+                <a
+                  href="/workshop?edit={{.ID}}"
+                  class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-fg hover:text-bg transition-colors duration-200 ease-out"
+                  title="Edit this artwork group"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </a>
+                {{end}}
+              </div>
             </div>
+            <p class="text-center text-sm text-fg/60 my-2 max-w-2xl mx-auto">{{.Prompt}}</p>
+            {{if .OriginalURL}}
+            <p class="text-center mb-8">
+              <a
+                href="{{.OriginalURL}}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-2 text-sm text-fg/60 hover:text-fg transition-colors duration-200 ease-out"
+              >
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15,3 21,3 21,9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
+                View original
+              </a>
+            </p>
             {{end}}
-            <p class="artwork-description">{{.Prompt}}</p>
-            <div class="artwork-variations">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-20 pb-16 mx-auto">
               {{range .Artworks}}
-              <div class="artwork-card" data-slug="{{.Slug}}" data-model="{{.Model}}">
-                <div class="artwork-preview">{{.SVGContent}}</div>
-                <div class="artwork-model-info">
-                  <div class="model-name">{{modelName .Model}}</div>
+              <div
+                class="flex items-center justify-center overflow-hidden flex-col"
+                data-artwork-id="{{.ID}}"
+                data-model="{{.Model}}"
+              >
+                {{if .SVGContent}}
+                <div
+                  class="w-full max-h-[50vh] h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
+                >
+                  {{.SVGContent}}
+                </div>
+                {{else}}
+                <div class="flex flex-col items-center justify-center text-fg/40 space-y-2">
+                  <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21,15 16,10 5,21" />
+                  </svg>
+                  <span class="text-sm">No preview available</span>
+                </div>
+                {{end}}
+                <div class="text-center mt-4">
+                  <div class="text-xs font-bold">{{modelName .Model}}</div>
                 </div>
               </div>
               {{end}}
@@ -52,28 +109,48 @@
           {{end}}
         </div>
         {{else}}
-        <div class="empty-gallery">
-          <h3>No artworks yet</h3>
-          <p>Start creating some artwork to see them here!</p>
+        <div class="flex flex-col items-center justify-center text-center py-20 space-y-8">
+          <div class="w-16 h-16 text-fg/20">
+            <svg class="w-full h-full" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21,15 16,10 5,21" />
+            </svg>
+          </div>
+          <div class="space-y-4">
+            <h3 class="text-2xl font-bold">No artworks yet</h3>
+            <p class="text-lg text-fg/70 max-w-md">Start creating some artwork to see them here!</p>
+          </div>
           {{if .EditingEnabled}}
-          <a href="/workshop" class="nav-link">Create Artwork</a>
+          <a
+            href="/workshop"
+            class="inline-flex items-center gap-3 px-6 py-3 bg-fg text-bg font-medium hover:bg-fg/90 transition-colors duration-200 ease-out"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Create Your First Artwork
+          </a>
           {{end}}
         </div>
         {{end}}
       </main>
 
-      <footer>
-        <p>Created by <a href="https://koenvangilst.nl" target="_blank" rel="noopener noreferrer">Koen van Gilst</a></p>
-      </footer>
+      {{template "footer" .}}
     </div>
 
     {{if .EditingEnabled}}
     <!-- Floating create button -->
-    <a href="/workshop" class="floating-create-btn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12h14" />
-      </svg>
-    </a>
+    <div class="fixed bottom-8 right-8">
+      <a
+        href="/workshop"
+        class="flex items-center justify-center w-14 h-14 bg-fg text-bg hover:bg-fg/90 transition-colors duration-200 ease-out shadow-lg"
+      >
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </a>
+    </div>
     {{end}}
   </body>
 </html>

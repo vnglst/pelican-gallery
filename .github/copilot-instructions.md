@@ -1,8 +1,13 @@
 # GitHub Copilot Instructions for Pelican Art Gallery
 
-## Project Overview
+## Project Overview├── static/
 
-This is **Pelican Art Gallery** - a Go-based web application for generating AI-powered SVG artwork. The project serves as an art gallery and workshop for creating custom SVG illustrations using various AI models, inspired by Simon Willison's famous experiment testing 16 different LLMs on generating SVG code for "a pelican riding a bicycle."
+│ ├── js/ # Modern ES6 modules
+│ │ └── workshop.js # Preact-based workshop interface
+│ ├── css/
+│ │ ├── input.css # Tailwind CSS v4 configuration with @theme
+│ │ └── output.css # Generated Tailwind CSS
+│ └── favicon.svg # Site iconican Art Gallery\*\* - a Go-based web application for generating AI-powered SVG artwork. The project serves as an art gallery and workshop for creating custom SVG illustrations using various AI models, inspired by Simon Willison's famous experiment testing 16 different LLMs on generating SVG code for "a pelican riding a bicycle."
 
 The project was sparked by the creative potential demonstrated in [Simon Willison's LLM SVG benchmark](https://simonwillison.net/2024/Oct/25/pelicans-on-a-bicycle/), which showed how different AI models produce varying quality SVG outputs when given the same creative prompt.
 
@@ -18,11 +23,12 @@ The project was sparked by the creative potential demonstrated in [Simon Williso
 
 ### Frontend
 
-- **CSS**: Component-based architecture with CSS custom properties (variables)
-- **JavaScript**: **Modern ES6 modules architecture** with vanilla JavaScript
-  - **Module System**: ES6 import/export with clear separation of concerns
-  - **Architecture**: Functional composition, keeping things modular and simple
-- **Templates**: Separated by purpose (homepage, workshop, gallery)
+- **CSS**: Tailwind CSS v4 with CSS-first configuration using `@theme` directive
+- **JavaScript**: **Preact-based workshop interface** with modern ES6 modules
+  - **Workshop App**: Preact with HTM for component-based rendering in `workshop.js`
+  - **Module System**: ES6 import/export for utility functions and components
+  - **Architecture**: Functional composition with Preact hooks (useState, useEffect, useRef)
+- **Templates**: Go HTML templates for server-side rendering (homepage, workshop, gallery)
 
 ## Code Style & Conventions
 
@@ -36,11 +42,11 @@ The project was sparked by the creative potential demonstrated in [Simon Williso
 
 ### CSS Architecture
 
-- **Component-based**: Each major UI component gets its own CSS file
-- **CSS Custom Properties**: Use `--spacing-*`, `--color-*`, `--transition-*` variables
-- **No CSS frameworks**: Keep dependencies minimal
-- **Mobile-first**: Design for mobile, enhance for desktop
-- **Dark mode support**: Use `prefers-color-scheme` media queries
+- **Tailwind CSS v4**: CSS-first configuration with `@theme` directive in `static/css/input.css`
+- **Custom Theme**: Black/white color scheme with CSS custom properties
+- **Utility-First**: All styling uses Tailwind utility classes, no custom CSS components
+- **Mobile-first**: Responsive design with Tailwind breakpoints
+- **Build Process**: Standalone Tailwind binary processes classes from templates and JavaScript
 
 ### Template Organization
 
@@ -52,10 +58,12 @@ The project was sparked by the creative potential demonstrated in [Simon Williso
 ### JavaScript
 
 - **ES6 Modules**: Use import/export for all new code
-- **Modern Patterns**: Private class fields (#private), async/await, destructuring
-- **Architecture**: Functional composition over inheritance
+- **Preact Components**: Workshop interface built with Preact functional components
+- **HTM**: Template literals for JSX-like syntax without build step
+- **Modern Patterns**: Hooks (useState, useEffect, useRef), async/await, destructuring
+- **Architecture**: Functional composition with component-based UI
 - **Error Handling**: Comprehensive try/catch with user-friendly messages
-- **Performance**: Lazy loading, request cancellation with AbortController
+- **Performance**: Lightweight Preact bundle, efficient re-rendering
 - **Accessibility**: Focus management, keyboard navigation, ARIA attributes
 
 ## Project Structure
@@ -113,6 +121,14 @@ Active states, highlights, and accents should use **bold typography, shadows, an
 - Use `transform: translateY(-1px)` for interactive feedback
 - Use `background: var(--fg)` with `color: var(--bg)` for active states
 
+### Design Aesthetic & Visual Language
+
+A modern, minimalist design aesthetic with a strict high-contrast, black-and-white color palette. The style is clean and gallery-inspired, prioritizing readability and uncluttered space.
+
+It uses a professional, legible sans-serif font with a clear typographic scale; headings are bold and significantly larger than the body text. The layout is spacious and centered, with generous white space that creates a sense of focus and calm.
+
+Interactive elements like buttons and links have subtle, non-color-based hover and active states. Interactivity is communicated through gentle shadows, slight upward shifts, or by inverting the black-and-white scheme for a striking effect on active selection. Borders are minimal, thin, and light gray, used only to softly define containers without distracting from the content.
+
 ### Component Separation
 
 - Each template serves a distinct purpose
@@ -140,16 +156,16 @@ Active states, highlights, and accents should use **bold typography, shadows, an
 
 1. Start with Go handlers in `internal/api/`
 2. Create necessary templates in `templates/`
-3. Add component CSS in `static/css/components/`
-4. Add JavaScript functionality if needed
+3. Add Tailwind styling using utility classes
+4. Add Preact components in `workshop.js` if needed
 5. Update routing in `main.go`
 
 ### CSS Development
 
-- Create new component files for major UI sections
-- Use existing CSS custom properties for consistency
-- Test dark mode compatibility
-- Ensure mobile responsiveness
+- Use Tailwind utility classes for all styling
+- Follow the established black/white design tokens
+- Test responsive behavior with Tailwind breakpoints
+- Ensure mobile responsiveness with mobile-first approach
 
 ### Template Updates
 
@@ -168,17 +184,18 @@ Active states, highlights, and accents should use **bold typography, shadows, an
 
 ### CSS Variables
 
-- Always use CSS custom properties for spacing, colors, transitions
-- Check both light and dark mode when adding styles
-- Component styles should be self-contained but use global variables
+- Always use Tailwind utility classes for styling
+- Custom theme values are defined in `static/css/input.css` with `@theme` directive
+- Use semantic color names: `bg-bg`, `text-fg`, `border-border`
+- Leverage Tailwind's spacing, typography, and responsive utilities
 
 ### JavaScript Complexity
 
-- **Modular Architecture**: Refactored from monolithic script.js to ES6 modules for maintainability
-- **Dependency Injection**: Use constructor injection instead of dynamic imports for better testability
-- **Context Binding**: Arrow functions solve event handler context issues in class methods
-- **Private Fields**: Use `#private` syntax for encapsulation instead of closures
-- **Event Delegation**: Centralized event handling prevents memory leaks and improves performance
+- **Preact Architecture**: Workshop interface uses Preact functional components with hooks
+- **HTM Templates**: JSX-like syntax using htm template literals, no build step required
+- **Component State**: useState, useEffect, useRef hooks for component lifecycle
+- **Event Handling**: Preact event handlers with proper context binding
+- **Modular Design**: Single workshop.js file with well-organized component structure
 
 ### Build Process
 
@@ -188,10 +205,10 @@ Active states, highlights, and accents should use **bold typography, shadows, an
 
 ## File Naming Conventions
 
-- CSS components: `component-name.css` in `static/css/components/`
+- CSS components: Use Tailwind utility classes directly in templates and JavaScript
 - Templates: `purpose.html` in `templates/`
 - Go packages: lowercase, descriptive names
-- JavaScript: Semantic function and variable names
+- JavaScript: Semantic function and component names in Preact style
 
 ## Testing & Quality
 
@@ -207,102 +224,95 @@ Active states, highlights, and accents should use **bold typography, shadows, an
 
 1. Create template in `templates/new-page.html`
 2. Add route handler in `internal/api/handlers.go`
-3. Create CSS component in `static/css/components/new-page.css`
-4. Import CSS component in `static/css/main.css`
+3. Style with Tailwind utility classes in the template
+4. Add Preact components to `workshop.js` if interactive features needed
 5. Add route in `main.go`
 
 ### Styling Updates
 
-1. Use existing CSS custom properties when possible
-2. Add new component CSS file if needed
-3. Test both light and dark modes
-4. Ensure mobile compatibility
-5. Keep styles semantic and maintainable
+1. Use Tailwind utility classes following the established design system
+2. Leverage Tailwind's responsive utilities for mobile compatibility
+3. Follow the black/white color scheme strictly
+4. Use flat hover effects with `hover:bg-fg hover:text-bg`
+5. Test across different screen sizes
 
 ### JavaScript Features
 
 1. **ES6 Modules**: Use import/export for all new code with clear module boundaries
-2. **Class-based Architecture**: Each feature module exports a class with private fields (#private)
-3. **Dependency Injection**: Managers receive DOM elements and modal instances at construction
+2. **Preact Components**: Workshop interface uses Preact functional components with hooks
+3. **HTM Templates**: JSX-like syntax using htm template literals, no build step required
 4. **Modern JavaScript**: async/await, destructuring, optional chaining, arrow functions
-5. **Event Delegation**: Centralized event handling with proper context binding
+5. **Event Handling**: Preact event handlers with proper context binding
 6. **Error Boundaries**: Comprehensive try/catch with user-friendly error messages
 7. **Request Cancellation**: AbortController for cancelling in-flight requests
 8. **Accessibility**: Focus management, keyboard navigation, ARIA attributes
 
 ### JavaScript Development Tasks
 
-1. **Adding New Modules**: Create class-based modules in `static/js/modules/` with dependency injection
-2. **Updating Existing Features**: Modify specific module files rather than monolithic script
-3. **DOM Utilities**: Add pure functions to `static/js/utils/dom.js` for reusable DOM operations
-4. **Event Handling**: Use event delegation in main.js for new interactive elements
-5. **Error Handling**: Implement try/catch with UI.showError() for user-friendly feedback
+1. **Adding New Components**: Create Preact functional components in `workshop.js` using hooks
+2. **Updating Existing Features**: Modify component logic while maintaining hook dependencies
+3. **Event Handling**: Use Preact event handlers with proper state management
+4. **Error Handling**: Implement try/catch with toast notifications for user-friendly feedback
+5. **State Management**: Use useState, useEffect for component lifecycle and data flow
 
-## ES6 Module Architecture
+## Preact Workshop Architecture
 
-### Module Organization
+The workshop interface is built as a single-page application using Preact with HTM (no build step required).
 
-- **`main.js`**: Application bootstrap, event setup, and global state management
-- **`modules/artwork.js`**: Artwork generation, saving, regeneration, and gallery management
-- **`modules/config.js`**: Configuration management with server synchronization
-- **`modules/modals.js`**: Modal dialog management (model selector, examples, config)
-- **`modules/models.js`**: Model selection, management, and persistence
-- **`modules/ui.js`**: User interface utilities, error handling, and feedback
-- **`utils/dom.js`**: Pure DOM manipulation utilities and element queries
+### Component Organization
+
+- **`workshop.js`**: Complete Preact application with all components and state management
+- **Components**: Toast, Loading, Modals, ArtworkCard, WorkshopApp (main component)
+- **State Management**: React hooks (useState, useEffect, useRef) for component state
+- **Event Handling**: Preact event handlers with proper context and state updates
 
 ### Architecture Patterns
 
-- **Class-based modules**: Each feature module exports a class with private fields (#private)
-- **Dependency injection**: Managers receive DOM elements and modal instances
-- **Event delegation**: Centralized event handling with proper context binding
-- **Async/await patterns**: Modern asynchronous programming throughout
-- **Global state management**: Centralized state in main.js with selective exports
+- **Functional Components**: All components use function syntax with hooks
+- **HTM Templates**: JSX-like syntax using template literals, no compilation needed
+- **Component State**: Local state with useState, side effects with useEffect
+- **Props-based Communication**: Parent-child communication through props and callbacks
+- **Error Boundaries**: Try/catch with toast notifications for user feedback
 
 ### Modern Patterns
 
 ```javascript
-// Class-based module with dependency injection
-export class ArtworkManager {
-  #elements;
-  #modals;
+// Preact functional component with hooks
+const ArtworkCard = ({ artwork, onRegenerate, onConfigure }) => {
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  constructor(elements, modals) {
-    this.#elements = elements;
-    this.#modals = modals;
-  }
-
-  async handleGenerate(prompt, selectedModels) {
-    // Implementation with proper error handling
+  const handleGenerate = async () => {
+    setIsGenerating(true);
     try {
-      const response = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, models: selectedModels }),
-      });
-
-      if (!response.ok) throw new Error("Generation failed");
-
-      const result = await response.json();
-      this.#displayArtwork(result);
+      await onRegenerate(artwork.id);
     } catch (error) {
-      UI.showError(`Generation failed: ${error.message}`);
+      showToast(`Generation failed: ${error.message}`, "error");
+    } finally {
+      setIsGenerating(false);
     }
-  }
-}
+  };
+
+  return html`
+    <div class="border border-border ${isGenerating ? "opacity-60" : ""}">
+      <button onClick=${handleGenerate} disabled=${isGenerating}>Generate</button>
+    </div>
+  `;
+};
 ```
 
 ### Event Handling
 
-- Use event delegation instead of scattered listeners
-- Implement custom events for module communication
-- Provide keyboard navigation and accessibility
+- Use Preact event handlers (onClick, onInput, onSubmit)
+- State updates trigger automatic re-rendering
+- Proper context binding with arrow functions
+- Form handling with controlled components
 
 ### Error Management
 
-- Comprehensive error boundaries
-- User-friendly error messages
+- Comprehensive error boundaries with try/catch
+- User-friendly toast notifications for errors
 - Console logging for debugging
-- Optional error tracking integration
+- Graceful degradation for network failures
 
 ## Inspiration & Context
 
