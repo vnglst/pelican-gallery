@@ -195,6 +195,8 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 func main() {
+	log.Println("🚀 Starting Pelican Art Gallery application...")
+
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using system environment variables")
 	}
@@ -209,17 +211,23 @@ func main() {
 	if dbPath == "" {
 		dbPath = "artworks.db"
 	}
+	log.Printf("Database path: %s", dbPath)
 
 	var db *database.DB
 	var err error
+	log.Printf("ENABLE_EDITING: %s", os.Getenv("ENABLE_EDITING"))
+	log.Printf("IsEditingEnabled(): %t", config.IsEditingEnabled())
+
 	if !config.IsEditingEnabled() {
 		// Open database in read-only mode
+		log.Printf("Opening database in read-only mode: %s", "file:" + dbPath + "?mode=ro")
 		db, err = database.New("file:" + dbPath + "?mode=ro")
 		if err != nil {
 			log.Fatalf("Failed to open database in read-only mode: %v", err)
 		}
 		log.Printf("Database opened in read-only mode at: %s", dbPath)
 	} else {
+		log.Printf("Opening database in write mode: %s", dbPath)
 		db, err = database.New(dbPath)
 		if err != nil {
 			log.Fatalf("Failed to initialize database: %v", err)
@@ -355,11 +363,13 @@ func main() {
 		port = "8080"
 	}
 
+	log.Printf("Starting server on port: %s", port)
 	fmt.Printf("Pelican Art Gallery starting on http://localhost:%s\n", port)
 	fmt.Println("Press Ctrl+C to stop the server")
 
 	loggedMux := loggingMiddleware(mux)
 
+	log.Printf("Server configured, attempting to listen on port %s", port)
 	if err := http.ListenAndServe(":"+port, loggedMux); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
