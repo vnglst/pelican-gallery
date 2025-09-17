@@ -1,14 +1,37 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"pelican-gallery/internal/models"
 
 	"gopkg.in/yaml.v3"
 )
+
+var (
+	modelsCache []models.ModelInfo
+	cacheExpiry time.Time
+	modelsMu    sync.RWMutex
+)
+
+type openRouterResponse struct {
+	Data []openRouterModel `json:"data"`
+}
+
+type openRouterModel struct {
+	ID      string                 `json:"id"`
+	Name    string                 `json:"name"`
+	Pricing map[string]interface{} `json:"pricing"`
+}
 
 // LoadPromptConfig loads the prompt configuration from the YAML file
 func LoadPromptConfig(filename string) (*models.PromptConfig, error) {
@@ -38,14 +61,97 @@ func GetAvailableModels() []models.ModelInfo {
 		defaultSet[id] = true
 	}
 
-	allModels := getAllModels()
-
-	// Set the Checked field based on whether the model is in defaults
-	for i := range allModels {
-		allModels[i].Checked = defaultSet[allModels[i].ID]
+	// Try to fetch live models from OpenRouter when an API key is present.
+	var allModels []models.ModelInfo
+	if openModels, err := fetchOpenRouterModels(); err == nil && len(openModels) > 0 {
+		allModels = openModels
+	} else {
+		allModels = getAllModels()
 	}
 
-	return allModels
+	// Sort models by cost (cheapest first)
+	sort.Slice(allModels, func(i, j int) bool {
+		return allModels[i].Cost < allModels[j].Cost
+	})
+
+	// Filter out the "openrouter/auto" model
+	var filteredModels []models.ModelInfo
+	for _, model := range allModels {
+		if model.ID != "openrouter/auto" {
+			filteredModels = append(filteredModels, model)
+		}
+	}
+
+	// Set the Checked field based on whether the model is in defaults
+	for i := range filteredModels {
+		filteredModels[i].Checked = defaultSet[filteredModels[i].ID]
+	}
+
+	return filteredModels
+}
+
+// fetchOpenRouterModels fetches models from the OpenRouter API
+func fetchOpenRouterModels() ([]models.ModelInfo, error) {
+	// Return cached value if valid
+	modelsMu.RLock()
+	if time.Now().Before(cacheExpiry) && len(modelsCache) > 0 {
+		models := make([]models.ModelInfo, len(modelsCache))
+		copy(models, modelsCache)
+		modelsMu.RUnlock()
+		return models, nil
+	}
+	modelsMu.RUnlock()
+
+	// Fetch from API
+	modelsMu.Lock()
+	defer modelsMu.Unlock()
+
+	resp, err := http.Get("https://openrouter.ai/api/v1/models")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned status %d", resp.StatusCode)
+	}
+
+	var apiResp openRouterResponse
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+		return nil, err
+	}
+
+	var modelInfos []models.ModelInfo
+	for _, model := range apiResp.Data {
+		cost := 0.0
+		if completion, ok := model.Pricing["completion"].(string); ok {
+			if f, err := parseFloat(completion); err == nil {
+				// Convert from per-token to per-million-tokens cost
+				cost = f * 1000000
+			}
+		}
+		modelInfos = append(modelInfos, models.ModelInfo{
+			ID:   model.ID,
+			Name: model.Name,
+			Cost: cost,
+		})
+	}
+
+	// Update cache
+	modelsCache = make([]models.ModelInfo, len(modelInfos))
+	copy(modelsCache, modelInfos)
+	cacheExpiry = time.Now().Add(5 * time.Minute)
+
+	log.Printf("Fetched %d models from OpenRouter", len(modelInfos))
+	return modelInfos, nil
+}
+
+// parseFloat parses a string to float64
+func parseFloat(s string) (float64, error) {
+	if s == "" {
+		return 0, fmt.Errorf("empty string")
+	}
+	return strconv.ParseFloat(s, 64)
 }
 
 // IsEditingEnabled checks if artwork editing/creating is enabled
@@ -75,36 +181,11 @@ func GetDefaultModels() []string {
 
 // getAllModels returns the raw model data (helper function)
 func getAllModels() []models.ModelInfo {
-	return []models.ModelInfo{
-		{ID: "deepseek/deepseek-chat-v3.1:free", Name: "DeepSeek: DeepSeek V3.1 (free)", Cost: 0.00},
-		{ID: "openai/gpt-5-nano", Name: "OpenAI: GPT-5 Nano", Cost: 0.05},
-		{ID: "meta-llama/llama-3.3-70b-instruct", Name: "Meta: Llama 3.3 70B Instruct", Cost: 0.12},
-		{ID: "google/gemma-3-12b-it", Name: "Google: Gemma 3 12B", Cost: 0.193},
-		{ID: "x-ai/grok-code-fast-1", Name: "xAI: Grok Code Fast 1", Cost: 0.20},
-		{ID: "google/gemma-3-27b-it", Name: "Google: Gemma 3 27B", Cost: 0.267},
-		{ID: "openai/gpt-oss-120b", Name: "OpenAI: gpt-oss-120b", Cost: 0.28},
-		{ID: "google/gemini-2.0-flash-001", Name: "Google: Gemini 2.0 Flash", Cost: 0.40},
-		{ID: "google/gemini-2.5-flash-lite", Name: "Google: Gemini 2.5 Flash Lite", Cost: 0.40},
-		{ID: "google/gemini-2.5-flash-lite-preview-06-17", Name: "Google: Gemini 2.5 Flash Lite Preview 06-17", Cost: 0.40},
-		{ID: "openai/gpt-5-mini", Name: "OpenAI: GPT-5 Mini", Cost: 2.00},
-		{ID: "anthropic/claude-3.5-haiku", Name: "Anthropic: Claude 3.5 Haiku", Cost: 0.80},
-		{ID: "deepseek/deepseek-chat-v3-0324", Name: "DeepSeek: DeepSeek V3 0324", Cost: 0.80},
-		{ID: "deepseek/deepseek-chat-v3.1", Name: "DeepSeek: DeepSeek V3.1", Cost: 0.80},
-		{ID: "qwen/qwen3-coder", Name: "Qwen: Qwen3 Coder 480B A35B", Cost: 0.80},
-		{ID: "deepseek/deepseek-r1-0528", Name: "DeepSeek: R1 0528", Cost: 0.80},
-		{ID: "openai/gpt-4.1", Name: "OpenAI: GPT-4.1", Cost: 8.00},
-		{ID: "openai/gpt-5", Name: "OpenAI: GPT-5", Cost: 1.25},
-		{ID: "openai/gpt-4o-2024-11-20", Name: "OpenAI: GPT-4o 2024-11-20", Cost: 10.00},
-		{ID: "google/gemini-2.5-pro", Name: "Google: Gemini 2.5 Pro", Cost: 10.00},
-		{ID: "z-ai/glm-4.5", Name: "Z.AI: GLM 4.5", Cost: 1.32},
-		{ID: "moonshotai/kimi-k2", Name: "MoonshotAI: Kimi K2", Cost: 2.49},
-		{ID: "google/gemini-2.5-flash", Name: "Google: Gemini 2.5 Flash", Cost: 2.50},
-		{ID: "anthropic/claude-3.7-sonnet", Name: "Anthropic: Claude 3.7 Sonnet", Cost: 3.00},
-		{ID: "x-ai/grok-4", Name: "xAI: Grok 4", Cost: 3.00},
-		{ID: "anthropic/claude-sonnet-4", Name: "Anthropic: Claude Sonnet 4", Cost: 3.00},
-		{ID: "openai/gpt-4-turbo", Name: "OpenAI: GPT-4 Turbo", Cost: 30.00},
-		{ID: "anthropic/claude-opus-4", Name: "Anthropic: Claude Opus 4", Cost: 15.00},
-		{ID: "anthropic/claude-opus-4.1", Name: "Anthropic: Claude Opus 4.1", Cost: 15.00},
-		{ID: "openai/gpt-3.5-turbo-0613", Name: "OpenAI: GPT-3.5 Turbo (older v0613)", Cost: 1.50},
+	// Return live models from OpenRouter only. If the API call fails return an
+	// empty list.
+	if live, err := fetchOpenRouterModels(); err == nil && len(live) > 0 {
+		return live
 	}
+
+	return []models.ModelInfo{}
 }

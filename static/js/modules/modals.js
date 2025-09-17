@@ -61,7 +61,7 @@ export const ModelModal = ({ isOpen, onClose, onSelect, models, loading, error }
                     }}
                   >
                     <div class="font-semibold">${model.name}</div>
-                    <div class="text-sm opacity-75">$${model.cost}/req</div>
+                    <div class="text-sm opacity-75">$${model.cost.toFixed(2)}/1M tokens</div>
                   </div>
                 `
               )
