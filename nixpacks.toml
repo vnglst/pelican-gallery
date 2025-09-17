@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["go_1_21"]
+
+[phases.install]
+cmds = ["make install"]
+
+[phases.build]
+cmds = ["make build"]
+cacheDirectories = ["/root/.cache/go-build"]
+
+[start]
+cmd = "./bin/server"
+
+[variables]
+CGO_ENABLED = "0"
+GO_ENV = "production"
