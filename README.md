@@ -1,6 +1,6 @@
 # Pelican Art Gallery
 
-A Go-based web application for generating AI-powered SVG artwork, inspired by [Simon Willison's exploration of SVG art generation with LLMs](https://simonwillison.net/2024/Oct/25/pelicans-on-a-bicycle/).
+What happens when you ask an AI to draw famous paintings as simple computer graphics? This project shows how language models—usually built for text—try to turn classic artworks into SVG images. Even though these AIs aren't trained to make vector graphics, it's fun to see how they mix what they know about art with their ability to write SVG code. This project is inspired by [Simon Willison's article](https://simonwillison.net/2025/Jun/6/six-months-in-llms/) about creative LLM benchmarks.
 
 ## What is Pelican Art Gallery?
 

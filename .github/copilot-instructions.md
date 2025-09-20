@@ -7,9 +7,10 @@
 │ ├── css/
 │ │ ├── input.css # Tailwind CSS v4 configuration with @theme
 │ │ └── output.css # Generated Tailwind CSS
-│ └── favicon.svg # Site iconican Art Gallery\*\* - a Go-based web application for generating AI-powered SVG artwork. The project serves as an art gallery and workshop for creating custom SVG illustrations using various AI models, inspired by Simon Willison's famous experiment testing 16 different LLMs on generating SVG code for "a pelican riding a bicycle."
 
-The project was sparked by the creative potential demonstrated in [Simon Willison's LLM SVG benchmark](https://simonwillison.net/2024/Oct/25/pelicans-on-a-bicycle/), which showed how different AI models produce varying quality SVG outputs when given the same creative prompt.
+│ └── favicon.svg # Site icon
+
+**Pelican Art Gallery** is a Go-based web application for generating AI-powered SVG artwork. What happens when you ask an AI to draw famous paintings as simple computer graphics? This project shows how language models—usually built for text—try to turn classic artworks into SVG images. Even though these AIs aren't trained to make vector graphics, it's fun to see how they mix what they know about art with their ability to write SVG code. This project is inspired by [Simon Willison's article](https://simonwillison.net/2025/Jun/6/six-months-in-llms/) about creative LLM benchmarks.
 
 ## Architecture & Technologies
 
