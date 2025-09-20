@@ -115,7 +115,7 @@
         <div class="space-y-0">
           {{range .Groups}}
           <div id="group-{{.ID}}" class="space-y-0">
-            <div class="sticky top-16 z-10 bg-bg py-6 px-6">
+            <div class="sticky top-16 z-10 bg-bg pt-6 pb-2 px-6">
               <div class="flex items-center justify-center gap-4">
                 <a href="#group-{{.ID}}" class="text-xl md:text-2xl font-light text-center hover:text-fg/80 transition-colors duration-200 ease-out">{{.Title}}</a>
                 {{if $.EditingEnabled}}
