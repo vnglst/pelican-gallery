@@ -123,8 +123,7 @@ func getStaticFS() http.FileSystem {
 func parseTemplates() (*template.Template, error) {
 	// Create template with custom functions
 	funcMap := template.FuncMap{
-		"modelName":          getModelDisplayName,
-		"formatModelFilters": formatModelFilters,
+		"modelName": getModelDisplayName,
 		"contains": func(slice []string, item string) bool {
 			for _, s := range slice {
 				if s == item {
@@ -170,29 +169,6 @@ func getModelDisplayName(modelID string) string {
 	}
 	// Return the ID if no match found
 	return modelID
-}
-
-// formatModelFilters formats a slice of model filter IDs into a readable string
-func formatModelFilters(modelFilters []string) string {
-	if len(modelFilters) == 0 {
-		return ""
-	}
-
-	displayNames := make([]string, len(modelFilters))
-	for i, filter := range modelFilters {
-		displayNames[i] = getModelDisplayName(filter)
-	}
-
-	if len(displayNames) == 1 {
-		return displayNames[0]
-	} else if len(displayNames) == 2 {
-		return displayNames[0] + " and " + displayNames[1]
-	} else {
-		// For 3 or more, join with commas and "and" before the last one
-		result := strings.Join(displayNames[:len(displayNames)-1], ", ")
-		result += ", and " + displayNames[len(displayNames)-1]
-		return result
-	}
 }
 
 // loggingMiddleware logs all HTTP requests
