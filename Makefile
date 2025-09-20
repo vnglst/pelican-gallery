@@ -27,7 +27,11 @@ install:
 				echo "❌ Unsupported platform. Install Tailwind CSS manually"; \
 				exit 1; \
 				;; \
-		esac; \
+			esac; \
+		if [ ! -f bin/tailwindcss ]; then \
+			echo "❌ Failed to download Tailwind CSS binary. Please check your internet connection or download manually."; \
+			exit 1; \
+		fi; \
 		chmod +x bin/tailwindcss; \
 	fi
 	@echo "✅ Installation complete!"
