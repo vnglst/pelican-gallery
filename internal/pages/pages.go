@@ -202,11 +202,49 @@ func (h *PageHandler) HomepageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get a random group with artworks from anthropic/claude-sonnet-4 and openai/gpt-5
+	randomGroup, randomArtworks, err := h.db.GetRandomGroupWithModelArtworks("anthropic/claude-sonnet-4", "openai/gpt-5")
+	var featuredGroup *models.ArtworkGroup
+	var featuredArtworks []models.Artwork
+
+	if err != nil {
+		log.Printf("No random group found with both models, trying fallback: %v", err)
+		// Fallback: try to get any random group with artworks from either model
+		randomGroup, randomArtworks, err = h.db.GetRandomGroupWithModelArtworks("anthropic", "openai")
+		if err != nil {
+			log.Printf("No fallback group found either: %v", err)
+			// If still no group found, just continue without featured content
+		} else {
+			featuredGroup = randomGroup
+			featuredArtworks = randomArtworks
+		}
+	} else {
+		featuredGroup = randomGroup
+		featuredArtworks = randomArtworks
+	}
+
+	type HomepageArtwork struct {
+		models.Artwork
+		SVGContent template.HTML `json:"svg_content"`
+	}
+
+	var homepageArtworks []HomepageArtwork
+	for _, artwork := range featuredArtworks {
+		homepageArtworks = append(homepageArtworks, HomepageArtwork{
+			Artwork:    artwork,
+			SVGContent: template.HTML(artwork.SVG),
+		})
+	}
+
 	w.Header().Set("Content-Type", "text/html")
 	homepageData := struct {
-		EditingEnabled bool `json:"editing_enabled"`
+		EditingEnabled   bool                 `json:"editing_enabled"`
+		FeaturedGroup    *models.ArtworkGroup `json:"featured_group,omitempty"`
+		FeaturedArtworks []HomepageArtwork    `json:"featured_artworks,omitempty"`
 	}{
-		EditingEnabled: config.IsEditingEnabled(),
+		EditingEnabled:   config.IsEditingEnabled(),
+		FeaturedGroup:    featuredGroup,
+		FeaturedArtworks: homepageArtworks,
 	}
 
 	tmpl, err := h.getTemplate()

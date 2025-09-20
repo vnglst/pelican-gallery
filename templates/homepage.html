@@ -16,204 +16,38 @@
       </header>
 
       <main class="flex-1 w-full max-w-6xl mx-auto px-6 pb-12">
-        <div class="flex flex-col justify-center w-full max-w-2xl mx-auto text-center space-y-10">
-          <div class="flex flex-row mx-auto gap-6 flex-wrap md:justify-between justify-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="800"
-              height="1000"
-              viewBox="0 0 800 1000"
-              class="w-[80px] h-full"
+        <div class="flex flex-col justify-center w-full max-w-2xl mx-auto text-center space-y-4">
+          {{if .FeaturedGroup}}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {{range $index, $artwork := .FeaturedArtworks}}{{if lt $index 2}}
+            <a
+              href="/gallery/category/{{$.FeaturedGroup.Category}}#group-{{$.FeaturedGroup.ID}}"
+              class="block group {{if eq $index 1}}hidden md:block{{end}}"
             >
-              <defs>
-                <path
-                  id="cornerFlourish"
-                  d="M0,0 C28,-20 58,-20 88,0 C70,10 52,26 47,46 C76,36 98,36 118,50 C94,56 73,72 68,92 C92,84 112,84 132,98"
-                  fill="none"
-                ></path>
-              </defs>
-              <g id="frame" stroke="#000" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="20" y="20" width="760" height="960" rx="26" ry="26" stroke-width="16"></rect>
-                <rect x="52" y="52" width="696" height="896" rx="18" ry="18" stroke-width="6"></rect>
-                <rect x="80" y="80" width="640" height="840" rx="10" ry="10" stroke-width="2"></rect>
-                <g stroke-width="3">
-                  <use href="#cornerFlourish" transform="translate(110,110)"></use>
-                  <use href="#cornerFlourish" transform="translate(690,110) scale(-1,1)"></use>
-                  <use href="#cornerFlourish" transform="translate(110,890) scale(1,-1)"></use>
-                  <use href="#cornerFlourish" transform="translate(690,890) scale(-1,-1)"></use>
-                </g>
-                <g stroke-width="3">
-                  <path d="M330,110 Q400,45 470,110"></path>
-                  <path d="M350,110 Q400,62 450,110"></path>
-                  <path d="M330,110 L470,110"></path>
-                  <path d="M400,110 L400,138"></path>
-                </g>
-                <g stroke-width="2">
-                  <path d="M80,500 h-20 M80,520 h-20 M740,500 h20 M740,520 h20"></path>
-                  <path d="M400,920 v20 M420,920 v20 M380,920 v20"></path>
-                </g>
-              </g>
-              <g id="pelican" stroke="#000" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="430" cy="520" r="16"></circle>
-                <circle cx="436" cy="518" r="2" fill="#000"></circle>
-                <path d="M446,518 L520,515"></path>
-                <path d="M446,524 Q490,545 520,530"></path>
-                <path d="M446,524 Q440,542 424,556"></path>
-                <path d="M424,556 Q404,570 382,582"></path>
-                <path d="M382,582 Q360,610 350,648 Q360,690 410,705"></path>
-                <path d="M382,590 Q398,610 408,640 Q416,680 410,705"></path>
-                <path d="M380,620 Q410,638 442,660"></path>
-                <path d="M348,650 L332,636"></path>
-                <path d="M400,705 L410,760"></path>
-                <path d="M385,700 L380,760"></path>
-                <path d="M410,760 L430,760"></path>
-                <path d="M410,760 L422,772 L430,760"></path>
-                <path d="M380,760 L360,760"></path>
-                <path d="M380,760 L370,772 L360,760"></path>
-                <path d="M300,780 Q400,790 500,780" stroke-width="3"></path>
-              </g>
-            </svg>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              xmlns:xlink="http://www.w3.org/1999/xlink"
-              viewBox="0 0 800 1000"
-              class="w-[80px] h-full"
-            >
-              <rect width="100%" height="100%" fill="#ffffff"></rect>
-              <defs>
-                <path
-                  id="cornerDeco"
-                  d="M0 0 a28 28 0 0 1 28 28 M10 0 a42 42 0 0 1 42 42 M26 0 a58 58 0 0 1 58 58"
-                  fill="none"
-                  stroke="#000000"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                ></path>
-              </defs>
-              <g id="frame" fill="none" stroke="#000000">
-                <rect x="20" y="20" width="760" height="960" rx="34" ry="34" stroke-width="8"></rect>
-                <rect x="40" y="40" width="720" height="920" rx="24" ry="24" stroke-width="2"></rect>
-                <rect
-                  x="58"
-                  y="58"
-                  width="684"
-                  height="884"
-                  rx="18"
-                  ry="18"
-                  stroke-width="6"
-                  stroke-dasharray="1 22"
-                  stroke-linecap="round"
-                ></rect>
-                <g>
-                  <use xlink:href="#cornerDeco" transform="rotate(0) translate(60,60)"></use>
-                  <use xlink:href="#cornerDeco" transform="rotate(90) translate(740,60)"></use>
-                  <use xlink:href="#cornerDeco" transform="rotate(180) translate(740,940)"></use>
-                  <use xlink:href="#cornerDeco" transform="rotate(270) translate(60,940)"></use>
-                </g>
-                <rect x="96" y="96" width="608" height="808" rx="12" ry="12" stroke-width="2"></rect>
-              </g>
-              <g id="pelican" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="430" cy="360" r="16" stroke-width="6"></circle>
-                <circle cx="438" cy="354" r="3" fill="#000000" stroke="none"></circle>
-                <path d="M446 360 L600 334" stroke-width="6"></path>
-                <path d="M446 364 Q520 420 608 360" stroke-width="6"></path>
-                <path d="M414 372 Q368 440 412 520" stroke-width="6"></path>
-                <path d="M412 520 Q480 540 520 590" stroke-width="6"></path>
-                <path d="M460 540 q-30 40 -12 84 q36 12 76 -10" stroke-width="6"></path>
-                <path d="M520 590 q30 10 50 -20" stroke-width="6"></path>
-                <path d="M430 600 L430 736 M454 600 L454 736" stroke-width="6"></path>
-                <rect x="396" y="736" width="96" height="80" stroke-width="6"></rect>
-              </g>
-            </svg>
-            <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" class="w-[200px] h-full">
-              <g id="pelican">
-                <!-- Body -->
-                <path
-                  d="M150 200 C150 160, 160 140, 180 130 C200 120, 220 120, 240 130 C260 140, 270 160, 270 200 C270 240, 260 260, 240 270 C220 280, 200 280, 180 270 C160 260, 150 240, 150 200 Z"
-                  fill="white"
-                  stroke="black"
-                  stroke-width="2"
-                ></path>
-
-                <!-- Neck -->
-                <path
-                  d="M200 130 C200 100, 195 80, 190 70 C185 60, 180 55, 180 55"
-                  fill="none"
-                  stroke="black"
-                  stroke-width="2"
-                ></path>
-                <path
-                  d="M180 55 C170 50, 160 50, 150 55 C140 60, 140 70, 145 80 C150 90, 160 95, 170 95 C180 95, 185 85, 185 75 C185 65, 180 55, 180 55 Z"
-                  fill="white"
-                  stroke="black"
-                  stroke-width="2"
-                ></path>
-
-                <!-- Beak -->
-                <path
-                  d="M140 70 C120 75, 100 85, 90 100 C80 115, 80 130, 90 140 C100 150, 115 155, 130 155 C145 155, 155 150, 160 145 C165 140, 165 130, 160 120 C155 110, 150 90, 140 70 Z"
-                  fill="black"
-                  stroke="black"
-                  stroke-width="2"
-                ></path>
-
-                <!-- Beak pouch -->
-                <path
-                  d="M130 155 C125 165, 125 175, 130 185 C135 195, 145 200, 155 200 C165 200, 175 195, 180 185 C185 175, 185 165, 180 155 C175 150, 165 150, 155 150 C145 150, 135 150, 130 155 Z"
-                  fill="white"
-                  stroke="black"
-                  stroke-width="2"
-                ></path>
-
-                <!-- Eye -->
-                <circle cx="165" cy="70" r="8" fill="white" stroke="black" stroke-width="2"></circle>
-                <circle cx="167" cy="68" r="4" fill="black"></circle>
-                <circle cx="169" cy="66" r="2" fill="white"></circle>
-
-                <!-- Wing -->
-                <path
-                  d="M200 160 C180 170, 170 180, 165 195 C160 210, 165 225, 180 235 C195 245, 210 245, 225 235 C240 225, 245 210, 240 195 C235 180, 225 170, 200 160 Z"
-                  fill="white"
-                  stroke="black"
-                  stroke-width="2"
-                ></path>
-
-                <!-- Wing feathers -->
-                <path
-                  d="M180 170 L175 190 M185 175 L180 195 M190 180 L185 200 M195 185 L190 205 M200 190 L195 210 M205 185 L200 205 M210 180 L205 200 M215 175 L210 195 M220 170 L215 190"
-                  stroke="black"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                ></path>
-
-                <!-- Legs -->
-                <line x1="190" y1="270" x2="190" y2="300" stroke="black" stroke-width="3" stroke-linecap="round"></line>
-                <line x1="230" y1="270" x2="230" y2="300" stroke="black" stroke-width="3" stroke-linecap="round"></line>
-
-                <!-- Feet -->
-                <path
-                  d="M185 300 C180 305, 180 310, 185 315 M190 300 C190 305, 190 310, 190 315 M195 300 C200 305, 200 310, 195 315"
-                  stroke="black"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                ></path>
-                <path
-                  d="M225 300 C220 305, 220 310, 225 315 M230 300 C230 305, 230 310, 230 315 M235 300 C240 305, 240 310, 235 315"
-                  stroke="black"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                ></path>
-
-                <!-- Tail feathers -->
-                <path
-                  d="M240 260 C250 265, 260 265, 270 260 M240 265 C250 270, 260 270, 270 265"
-                  stroke="black"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                ></path>
-              </g>
-            </svg>
+              <div class="overflow-hidden">
+                {{if $artwork.SVG}}
+                <div
+                  class="w-full aspect-square flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain p-4"
+                >
+                  {{$artwork.SVGContent}}
+                </div>
+                {{else}}
+                <div class="w-full aspect-square flex items-center justify-center text-fg/40 p-4">
+                  <div class="text-center space-y-2">
+                    <svg class="w-8 h-8 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21,15 16,10 5,21" />
+                    </svg>
+                    <span class="text-sm">No preview available</span>
+                  </div>
+                </div>
+                {{end}}
+              </div>
+            </a>
+            {{end}}{{end}}
           </div>
+          {{else}} {{end}}
           <p class="text-lg md:text-xl leading-relaxed text-fg/90 font-normal">
             What happens when you ask an AI to draw famous paintings as simple computer graphics? This gallery shows how
             language models turn famous artworks into SVG images. Even though these AIs aren't trained to make vector

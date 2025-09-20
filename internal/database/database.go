@@ -542,3 +542,81 @@ func (db *DB) GetDistinctCategories() ([]string, error) {
 
 	return categories, nil
 }
+
+// GetRandomGroupWithModelArtworks returns a random group that has artworks from both specified models
+func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.ArtworkGroup, []models.Artwork, error) {
+	// First, find groups that have artworks from both models
+	query := `
+		SELECT DISTINCT g.id, g.title, g.prompt, g.category, g.original_url, g.artist_name, g.created_at, g.updated_at
+		FROM artwork_groups g
+		WHERE EXISTS (
+			SELECT 1 FROM artworks a WHERE a.group_id = g.id AND a.model LIKE ?
+		)
+		AND EXISTS (
+			SELECT 1 FROM artworks a WHERE a.group_id = g.id AND a.model LIKE ?
+		)
+		ORDER BY RANDOM()
+		LIMIT 1
+	`
+
+	var group models.ArtworkGroup
+	err := db.conn.QueryRow(query, "%"+model1+"%", "%"+model2+"%").Scan(
+		&group.ID,
+		&group.Title,
+		&group.Prompt,
+		&group.Category,
+		&group.OriginalURL,
+		&group.ArtistName,
+		&group.CreatedAt,
+		&group.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, fmt.Errorf("no group found with artworks from both models")
+		}
+		return nil, nil, fmt.Errorf("failed to get random group: %w", err)
+	}
+
+	// Get artworks for this group, filtered by the two models
+	artworkQuery := `
+		SELECT id, group_id, model, params_json, svg, created_at, updated_at
+		FROM artworks
+		WHERE group_id = ? AND (model LIKE ? OR model LIKE ?)
+		ORDER BY CASE
+			WHEN model LIKE ? THEN 1
+			WHEN model LIKE ? THEN 2
+			ELSE 3
+		END
+	`
+
+	rows, err := db.conn.Query(artworkQuery, group.ID, "%"+model1+"%", "%"+model2+"%", "%"+model1+"%", "%"+model2+"%")
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to query artworks: %w", err)
+	}
+	defer rows.Close()
+
+	var artworks []models.Artwork
+	for rows.Next() {
+		var artwork models.Artwork
+		err := rows.Scan(
+			&artwork.ID,
+			&artwork.GroupID,
+			&artwork.Model,
+			&artwork.Params,
+			&artwork.SVG,
+			&artwork.CreatedAt,
+			&artwork.UpdatedAt,
+		)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to scan artwork: %w", err)
+		}
+		artworks = append(artworks, artwork)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("error iterating artwork rows: %w", err)
+	}
+
+	return &group, artworks, nil
+}
