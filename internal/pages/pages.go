@@ -5,11 +5,25 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 
 	"pelican-gallery/internal/config"
 	"pelican-gallery/internal/database"
 	"pelican-gallery/internal/models"
 )
+
+// Filter constants for model providers
+const (
+	FilterOpenAI    = "openai"
+	FilterAnthropic = "anthropic"
+	FilterGoogle    = "google"
+	FilterOther     = "other"
+)
+
+// containsIgnoreCase performs case-insensitive substring matching
+func containsIgnoreCase(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
 
 // TemplateParser is a function type for parsing templates
 type TemplateParser func(*template.Template) (*template.Template, error)
@@ -49,25 +63,23 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 
 	category := r.URL.Query().Get("category")
 
+	// Parse model filter query params (can be multiple)
+	modelFilters := r.URL.Query()["model"] // e.g. ?model=openai&model=google
+
 	// If no category specified, redirect to first available category
 	if category == "" {
-		// Get all available categories for navigation
 		categories, err := h.db.GetDistinctCategories()
 		if err != nil {
 			log.Printf("Error fetching categories: %v", err)
 			http.Error(w, "Failed to fetch categories", http.StatusInternalServerError)
 			return
 		}
-
-		// If we have categories, redirect to the first one
 		if len(categories) > 0 {
 			http.Redirect(w, r, "/gallery/category/"+categories[0], http.StatusFound)
 			return
 		}
-		// If no categories, continue with empty category (will show empty gallery)
 	}
 
-	// Get groups with their artworks using the database helper
 	groups, artworkMap, err := h.db.ListGroupsWithArtworks(category)
 	if err != nil {
 		log.Printf("Error fetching groups with artworks: %v", err)
@@ -75,7 +87,6 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get all available categories for navigation
 	categories, err := h.db.GetDistinctCategories()
 	if err != nil {
 		log.Printf("Error fetching categories: %v", err)
@@ -83,13 +94,40 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build gallery data structures
+	// Helper: returns true if artwork's model matches any selected filter
+	modelMatches := func(model string) bool {
+		if len(modelFilters) == 0 {
+			return true // No filter: show all
+		}
+		for _, filter := range modelFilters {
+			switch filter {
+			case FilterOpenAI:
+				if containsIgnoreCase(model, FilterOpenAI) {
+					return true
+				}
+			case FilterAnthropic:
+				if containsIgnoreCase(model, FilterAnthropic) {
+					return true
+				}
+			case FilterGoogle:
+				if containsIgnoreCase(model, FilterGoogle) {
+					return true
+				}
+			case FilterOther:
+				if !containsIgnoreCase(model, FilterOpenAI) && !containsIgnoreCase(model, FilterAnthropic) && !containsIgnoreCase(model, FilterGoogle) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
 	type GalleryArtwork struct {
 		models.Artwork
-		Title      string        `json:"title"`       // From group
-		Category   string        `json:"category"`    // From group
-		Prompt     string        `json:"prompt"`      // From group
-		SVGContent template.HTML `json:"svg_content"` // HTML-safe SVG
+		Title      string        `json:"title"`
+		Category   string        `json:"category"`
+		Prompt     string        `json:"prompt"`
+		SVGContent template.HTML `json:"svg_content"`
 	}
 
 	type GalleryGroup struct {
@@ -99,22 +137,22 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 
 	var galleryGroups []GalleryGroup
 	for _, group := range groups {
-		artworks := artworkMap[group.ID] // Get artworks for this group
-
-		galleryArtworks := make([]GalleryArtwork, len(artworks))
-		for i, artwork := range artworks {
-			galleryArtworks[i] = GalleryArtwork{
-				Artwork:    artwork,
-				Title:      group.Title,
-				Category:   group.Category,
-				Prompt:     group.Prompt,
-				SVGContent: template.HTML(artwork.SVG),
+		artworks := artworkMap[group.ID]
+		var filteredArtworks []GalleryArtwork
+		for _, artwork := range artworks {
+			if modelMatches(artwork.Model) {
+				filteredArtworks = append(filteredArtworks, GalleryArtwork{
+					Artwork:    artwork,
+					Title:      group.Title,
+					Category:   group.Category,
+					Prompt:     group.Prompt,
+					SVGContent: template.HTML(artwork.SVG),
+				})
 			}
 		}
-
 		galleryGroups = append(galleryGroups, GalleryGroup{
 			ArtworkGroup: group,
-			Artworks:     galleryArtworks,
+			Artworks:     filteredArtworks,
 		})
 	}
 
@@ -126,12 +164,14 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		Categories     []string       `json:"categories"`
 		Category       string         `json:"category"`
 		EditingEnabled bool           `json:"editing_enabled"`
+		ModelFilters   []string       `json:"model_filters"`
 	}{
 		Title:          "Gallery - Pelican Art Gallery",
 		Groups:         galleryGroups,
 		Categories:     categories,
 		Category:       category,
 		EditingEnabled: isEditingEnabled(),
+		ModelFilters:   modelFilters,
 	}
 
 	w.Header().Set("Content-Type", "text/html")
