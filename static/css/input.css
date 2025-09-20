@@ -33,6 +33,10 @@
   --translate-y-2: -0.5rem;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 .scrollbar-hide {
   scrollbar-width: none;
 }
