@@ -205,13 +205,7 @@ This structure enables efficient storage and retrieval of related artworks while
 
 ## Inspiration
 
-This project draws direct inspiration from [Simon Willison's blog post](https://simonwillison.net/2024/Oct/25/pelicans-on-a-bicycle/) where he benchmarked 16 different AI models on their ability to generate SVG code for "a pelican riding a bicycle." He chose this creative prompt specifically because:
-
-- He likes pelicans
-- It's unlikely to exist in training data, making it a true test of generative capabilities
-
-The experiment tested models from OpenAI (GPT-4o, o1), Anthropic (Claude), Google (Gemini), and Meta (Llama on Cerebras), demonstrating the wide range of SVG generation quality possible with different LLMs. Pelican Art Gallery builds upon this concept by providing an accessible, user-friendly interface for exploring AI-generated SVG art beyond just the pelican example.
-
+This project draws direct inspiration from [Simon Willison's blog post](https://simonwillison.net/2024/Oct/25/pelicans-on-a-bicycle/) where he benchmarked 16 different AI models on their ability to generate SVG code for "a pelican riding a bicycle."
 ## Contributing
 
 Contributions are welcome! Please feel free to:
@@ -259,50 +253,6 @@ Contributions are welcome! Please feel free to:
    - Previewing and managing individual artworks
 3. **Gallery**: Browse and manage your artwork collection organized by groups
 
-## Configuration
-
-Customize the AI prompts and behavior in `config/prompt.yaml`. This file contains:
-
-- System prompt templates
-- User prompt formats
-- Model-specific configurations
-
-## API Endpoints
-
-### Pages
-
-- `GET /` - Homepage
-- `GET /workshop` - Art creation interface
-- `GET /gallery` - Artwork gallery
-- `GET /gallery/` - Artwork gallery (with trailing slash)
-
-### Artwork Groups
-
-- `GET /api/groups` - List all artwork groups
-- `POST /api/groups` - Create new artwork group
-- `GET /api/groups/{id}` - Get specific artwork group
-- `PUT /api/groups/{id}` - Update artwork group
-- `DELETE /api/groups/{id}` - Delete artwork group
-
-### Artworks
-
-- `GET /api/artworks` - List all artworks
-- `POST /api/artworks` - Create new artwork
-- `GET /api/artworks/{id}` - Get specific artwork
-- `PUT /api/artworks/{id}` - Update artwork
-- `DELETE /api/artworks/{id}` - Delete artwork
-- `POST /api/generate` - Generate SVG artwork for a group
-
-### Models & Configuration
-
-- `GET /api/models` - Available AI models
-- `GET /api/config` - Get current configuration
-- `POST /api/config` - Update configuration
-
-### System
-
-- `GET /health` - Health check
-
 ## Architecture
 
 ### Technology Stack
@@ -326,39 +276,6 @@ Customize the AI prompts and behavior in `config/prompt.yaml`. This file contain
 - **JavaScript**: Preact-based workshop interface with HTM for component rendering
 - **Design**: Modern minimalist aesthetic, mobile-first responsive design
 
-### Database Schema
-
-The application uses a normalized SQLite database with two main tables:
-
-- **artwork_groups**: Stores group metadata (title, prompt, category, created_at)
-- **artworks**: Stores individual artworks (group_id FK, model, params, SVG, created_at)
-
-This structure enables efficient storage and retrieval of related artworks while maintaining data integrity.
-
-### Key Design Principles
-
-- **Simplicity**: Vanilla solutions over complex frameworks, utility-first CSS
-- **Performance**: Minimal bundle size, efficient rendering with Preact
-- **Accessibility**: Semantic HTML, keyboard navigation, ARIA attributes
-- **Maintainability**: Component-based architecture, clear separation of concerns
-- **Data Integrity**: Normalized database schema with foreign key constraints
-- **Design Aesthetic**: Strict black-and-white color palette with flat interactions
-
-## Inspiration
-
-This project draws direct inspiration from [Simon Willison's blog post](https://simonwillison.net/2024/Oct/25/pelicans-on-a-bicycle/) where he benchmarked 16 different AI models on their ability to generate SVG code for "a pelican riding a bicycle." He chose this creative prompt specifically because:
-
-- He likes pelicans
-- It's unlikely to exist in training data, making it a true test of generative capabilities
-
-The experiment tested models from OpenAI (GPT-4o, o1), Anthropic (Claude), Google (Gemini), and Meta (Llama on Cerebras), demonstrating the wide range of SVG generation quality possible with different LLMs. Pelican Art Gallery builds upon this concept by providing an accessible, user-friendly interface for exploring AI-generated SVG art beyond just the pelican example.
-
-## Contributing
-
-Contributions are welcome! Please feel free to:
-
-- Report bugs or suggest features
-- Submit pull requests for improvements
 - Share your generated artwork examples
 
 ## License
