@@ -18,6 +18,7 @@ system_prompts:
       - Do NOT include backticks, code fences, or any text formatting
       - Include appropriate viewBox that matches the artwork's natural aspect ratio
       - Optimize code structure: group related elements using <g> tags, use efficient path definitions
+      - Don't use <symbol>, use <g> in <defs> instead.
 
 user_prompt_template: |-
   Create detailed SVG artwork depicting: {art_work_description}
