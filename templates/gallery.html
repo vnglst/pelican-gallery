@@ -315,6 +315,10 @@
           window.location.href = url.toString();
         }
 
+        // Why is this needed?
+        // The generated SVGs might not have a viewBox that fits their content,
+        // for instance when elements are rotated or translated outside the original viewBox.
+        // This script calculates the bounding box of the drawn content and updates the viewBox accordingly.
         document.querySelectorAll("figure svg").forEach(svg => {
           // get bounding box of all drawn content
           const bbox = svg.getBBox();
