@@ -308,8 +308,6 @@ func main() {
 	})
 
 	mux.HandleFunc("/api/generate", rateLimiter.Middleware(apiHandler.GenerateArtworkHandler))
-	// mux.HandleFunc("/api/save-artwork", rateLimiter.Middleware(apiHandler.SaveArtworkHandler))
-	// mux.HandleFunc("/api/regenerate-artwork", rateLimiter.Middleware(apiHandler.RegenerateArtworkHandler))
 	mux.HandleFunc("/api/delete-artwork/", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
 		// Extract ID from path
 		path := strings.TrimPrefix(r.URL.Path, "/api/delete-artwork/")
