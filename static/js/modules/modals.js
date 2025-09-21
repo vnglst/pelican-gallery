@@ -4,7 +4,7 @@ import { Modal } from "/static/js/modules/components.js";
 export const ModelModal = ({ isOpen, onClose, onSelect, models, loading, error }) => {
   const [filterText, setFilterText] = useState("");
 
-  const filteredModels = models.filter((model) => model.id.toLowerCase().startsWith(filterText.toLowerCase()));
+  const filteredModels = models.filter((model) => model.id.toLowerCase().includes(filterText.toLowerCase()));
 
   return html`
     <${Modal}
