@@ -71,16 +71,20 @@ export const ModelModal = ({ isOpen, onClose, onSelect, models, loading, error }
   `;
 };
 
+const DEFAULT_CONFIG = { temperature: 0.7, max_tokens: 50000 };
+
 export const ConfigModal = ({ isOpen, onClose, onSave, artwork }) => {
-  const [config, setConfig] = useState({ temperature: 0.7, max_tokens: 1000 });
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
 
   useEffect(() => {
-    if (artwork?.Params) {
+    if (artwork) {
       try {
-        const parsed = JSON.parse(artwork.Params);
-        setConfig(parsed);
+        setConfig({
+          temperature: artwork.temperature,
+          max_tokens: artwork.max_tokens,
+        });
       } catch (e) {
-        console.error("Failed to parse artwork params:", e);
+        console.error("Failed to read artwork params:", e);
       }
     }
   }, [artwork]);
@@ -91,7 +95,7 @@ export const ConfigModal = ({ isOpen, onClose, onSave, artwork }) => {
   };
 
   const resetDefaults = () => {
-    setConfig({ temperature: 0.7, max_tokens: 1000 });
+    setConfig(DEFAULT_CONFIG);
   };
 
   return html`

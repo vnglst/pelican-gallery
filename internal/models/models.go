@@ -30,13 +30,14 @@ type ArtworkGroup struct {
 
 // Artwork represents an individual artwork within a group
 type Artwork struct {
-	ID        int       `db:"id" json:"id"`
-	GroupID   int       `db:"group_id" json:"group_id"`
-	Model     string    `db:"model" json:"model"`
-	Params    string    `db:"params_json" json:"params"` // JSON string for parameters
-	SVG       string    `db:"svg" json:"svg"`
-	CreatedAt time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	ID          int       `db:"id" json:"id"`
+	GroupID     int       `db:"group_id" json:"group_id"`
+	Model       string    `db:"model" json:"model"`
+	Temperature float64   `db:"temperature" json:"temperature"`
+	MaxTokens   int       `db:"max_tokens" json:"max_tokens"`
+	SVG         string    `db:"svg" json:"svg"`
+	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Params represents the parameters for an artwork
@@ -102,10 +103,19 @@ type TemplateData struct {
 
 // OpenRouterRequest represents the request to OpenRouter API
 type OpenRouterRequest struct {
-	Model       string    `json:"model"`
-	Messages    []Message `json:"messages"`
-	Temperature float64   `json:"temperature"`
-	MaxTokens   int       `json:"max_tokens"`
+	Model       string     `json:"model"`
+	Messages    []Message  `json:"messages"`
+	Temperature float64    `json:"temperature"`
+	MaxTokens   int        `json:"max_tokens"`
+	Reasoning   *Reasoning `json:"reasoning,omitempty"`
+}
+
+// Reasoning represents the reasoning token controls for OpenRouter
+type Reasoning struct {
+	Effort    string `json:"effort,omitempty"` // "high", "medium", "low"
+	MaxTokens int    `json:"max_tokens,omitempty"`
+	Exclude   bool   `json:"exclude,omitempty"`
+	Enabled   bool   `json:"enabled,omitempty"`
 }
 
 // Message represents a message in the OpenRouter request

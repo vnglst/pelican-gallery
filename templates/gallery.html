@@ -11,7 +11,7 @@
   <body class="bg-bg text-fg font-sans antialiased min-h-screen">
     <div class="min-h-screen flex">
       <!-- Collapsible Filter Sidebar -->
-      <aside id="filter-sidebar" class="fixed right-0 top-0 h-full w-80 bg-bg border-l border-border transform translate-x-full transition-transform duration-300 ease-out z-30 shadow-xl">
+      <aside id="filter-sidebar" class="fixed right-0 top-0 h-full w-80 bg-bg border-l border-border transform translate-x-full transition-transform duration-300 ease-out z-100 shadow-xl">
         <div class="p-6">
           <header class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold">Filter by Model</h2>
@@ -82,7 +82,7 @@
       </aside>
 
       <!-- Overlay -->
-      <div id="sidebar-overlay" class="fixed inset-0 z-20 hidden"></div>
+      <div id="sidebar-overlay" class="fixed inset-0 z-50 bg-black/50 hidden transition-opacity duration-300 ease-out"></div>
 
       <!-- Main content -->
       <div class="flex-1 min-w-0">

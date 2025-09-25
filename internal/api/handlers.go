@@ -131,11 +131,7 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 	var messages []models.Message
 
 	for _, sysPrompt := range h.promptConfig.SystemPrompts {
-		message := models.Message{
-			Role:    sysPrompt.Role,
-			Content: sysPrompt.Content,
-		}
-		messages = append(messages, message)
+		messages = append(messages, models.Message(sysPrompt))
 	}
 
 	userPrompt := config.FormatUserPrompt(h.promptConfig.UserPromptTemplate, prompt)
@@ -151,7 +147,16 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 		Messages:    messages,
 		Temperature: temperature,
 		MaxTokens:   maxTokens,
+		Reasoning: &models.Reasoning{
+			Effort:  "medium",
+			Enabled: true,
+			Exclude: true,
+		},
 	}
+
+	// Note: reasoning is enabled for supported models at medium effort.
+	// We exclude reasoning from the response (exclude=true) and do not log reasoning content.
+	log.Printf("Request will use reasoning: effort=%s, exclude=%t", "medium", true)
 
 	jsonData, err := json.Marshal(openRouterReq)
 	if err != nil {
@@ -427,9 +432,10 @@ func (h *Handler) CreateArtworkHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		GroupID int    `json:"group_id"`
-		Model   string `json:"model"`
-		Params  string `json:"params"`
+		GroupID     int     `json:"group_id"`
+		Model       string  `json:"model"`
+		Temperature float64 `json:"temperature"`
+		MaxTokens   int     `json:"max_tokens"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -444,11 +450,12 @@ func (h *Handler) CreateArtworkHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	artwork := models.Artwork{
-		GroupID:   req.GroupID,
-		Model:     req.Model,
-		Params:    req.Params,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		GroupID:     req.GroupID,
+		Model:       req.Model,
+		Temperature: req.Temperature,
+		MaxTokens:   req.MaxTokens,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	id, err := h.db.CreateArtwork(artwork)
@@ -476,7 +483,8 @@ func (h *Handler) UpdateArtworkHandler(w http.ResponseWriter, r *http.Request, a
 	}
 
 	var req struct {
-		Params string `json:"params"`
+		Temperature float64 `json:"temperature"`
+		MaxTokens   int     `json:"max_tokens"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -485,7 +493,7 @@ func (h *Handler) UpdateArtworkHandler(w http.ResponseWriter, r *http.Request, a
 		return
 	}
 
-	if err := h.db.UpdateArtworkParams(artworkID, req.Params); err != nil {
+	if err := h.db.UpdateArtwork(artworkID, req.Temperature, req.MaxTokens); err != nil {
 		log.Printf("Error updating artwork (id=%d): %v", artworkID, err)
 		writeJSONError(w, http.StatusInternalServerError, "Failed to update artwork")
 		return
@@ -542,15 +550,7 @@ func (h *Handler) GenerateArtworkHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Parse params
-	var params models.Params
-	if err := json.Unmarshal([]byte(artwork.Params), &params); err != nil {
-		log.Printf("Error parsing artwork params (id=%d): %v", req.ArtworkID, err)
-		writeJSONError(w, http.StatusBadRequest, "Invalid artwork parameters")
-		return
-	}
-
-	svg, err := h.generateSVG(group.Prompt, artwork.Model, params.Temperature, params.MaxTokens)
+	svg, err := h.generateSVG(group.Prompt, artwork.Model, artwork.Temperature, artwork.MaxTokens)
 	if err != nil {
 		log.Printf("Error generating SVG for artwork %d: %v", req.ArtworkID, err)
 		writeJSONError(w, http.StatusInternalServerError, err.Error())

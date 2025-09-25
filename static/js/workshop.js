@@ -221,10 +221,8 @@ const WorkshopApp = () => {
       const payload = {
         group_id: groupId,
         model: model.id,
-        params: JSON.stringify({
-          temperature: 0.7,
-          max_tokens: 50_000,
-        }),
+        temperature: 0.7,
+        max_tokens: 50000,
       };
 
       const artwork = await api.createArtwork(payload);
@@ -263,8 +261,10 @@ const WorkshopApp = () => {
 
   const updateArtworkParams = async (artworkId, params) => {
     try {
-      const updated = await api.updateArtwork(artworkId, { params: JSON.stringify(params) });
-      const id = Number(artworkId);
+      const updated = await api.updateArtwork(artworkId, {
+        temperature: params.temperature,
+        max_tokens: params.max_tokens,
+      });
       dispatch({ type: "UPDATE_ARTWORK", payload: updated });
       showToast("Parameters updated", "success");
     } catch (error) {

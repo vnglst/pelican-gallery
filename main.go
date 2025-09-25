@@ -317,11 +317,12 @@ func main() {
 
 	// Group endpoints
 	mux.HandleFunc("/api/groups", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			apiHandler.ListGroupsHandler(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			apiHandler.CreateGroupHandler(w, r)
-		} else {
+		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}))
@@ -329,13 +330,14 @@ func main() {
 		path := strings.TrimPrefix(r.URL.Path, "/api/groups/")
 		idStr := strings.TrimSuffix(path, "/")
 
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			apiHandler.GetGroupHandler(w, r)
-		} else if r.Method == http.MethodPut {
+		case http.MethodPut:
 			apiHandler.UpdateGroupHandler(w, r, idStr)
-		} else if r.Method == http.MethodDelete {
+		case http.MethodDelete:
 			apiHandler.DeleteGroupHandler(w, r, idStr)
-		} else {
+		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	}))

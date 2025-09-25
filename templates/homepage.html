@@ -10,7 +10,7 @@
   </head>
   <body class="bg-bg text-fg font-sans antialiased min-h-screen">
     <div class="min-h-[110vh] flex flex-col">
-      <header class="w-full max-w-6xl mx-auto px-12 py-16">
+      <header class="w-full max-w-6xl mx-auto px-12 pt-16 pb-16">
         <h1 class="text-center">
           <a href="/" class="text-3xl md:text-4xl font-light inline-block">Pelican Art Gallery</a>
         </h1>
@@ -62,10 +62,13 @@
 
           <section class="space-y-6" aria-labelledby="about-section">
             <p class="text-lg md:text-xl leading-relaxed text-fg/90 font-normal">
-              What happens when you ask an AI to draw famous paintings as simple computer graphics? This gallery shows
-              how language models turn famous artworks into SVG images. Even though these AIs aren't trained to make
-              vector graphics, it's fun to see how they mix what they know about art with their ability to write SVG
-              code. This project is inspired by
+              What happens when you ask large language models to recreate famous paintings as simple vector graphics?
+              This gallery shows their attempts to turn artworks into SVG images. What makes this interesting isn’t that
+              GenAI can generate images from prompts - specialized models already do that. It’s how they combine
+              knowledge of art with the ability to write SVG code.
+            </p>
+            <p class="text-lg md:text-xl leading-relaxed text-fg/90 font-normal">
+              The project is inspired by
               <a
                 href="https://simonwillison.net/2025/Jun/6/six-months-in-llms/"
                 target="_blank"
@@ -73,9 +76,10 @@
                 class="font-semibold underline decoration-2 underline-offset-4 hover:bg-fg hover:text-bg hover:no-underline hover:shadow-medium hover:-translate-y-1 transition-all duration-200 ease-out px-2 py-1"
                 >Simon Willison's practice</a
               >
-              of using this as a creative LLM benchmark.
+              of using this as a creative LLM benchmark. When a new model is released, one of his first tests is whether
+              it can generate a pelican on a bicycle.
             </p>
-            <nav class="my-4">
+            <nav class="my-16">
               <a
                 href="/gallery"
                 class="inline-block text-sm font-medium tracking-wide uppercase hover:bg-fg hover:text-bg transition-all duration-200 ease-out px-4 py-2 border border-border"
