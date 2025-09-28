@@ -29,10 +29,8 @@
               >
                 <figure class="overflow-hidden">
                   {{if $artwork.SVG}}
-                  <div
-                    class="w-full aspect-square flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain p-4"
-                  >
-                    {{$artwork.SVGContent}}
+                  <div class="w-full aspect-square flex items-center justify-center p-4">
+                    {{template "frame" $artwork.SVGContent}}
                   </div>
                   {{else}}
                   <div class="w-full aspect-square flex items-center justify-center text-fg/40 p-4">

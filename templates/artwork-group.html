@@ -95,10 +95,9 @@
               <a
                 href="/gallery"
                 class="text-sm font-semibold hover:bg-fg hover:text-bg transition-colors duration-200 ease-out px-2 py-1"
-                >← Back</a
+                >← Back to Gallery</a
               >
             </nav>
-            <div class="text-center"></div>
             <div>
               {{if .EditingEnabled}}
               <a
@@ -129,7 +128,14 @@
       <!-- Sticky title only -->
       <div class="sticky top-0 z-20 bg-bg border-b border-border">
         <div class="max-w-6xl mx-auto px-6 py-3">
-          <h1 class="text-2xl md:text-3xl font-light text-center">{{.Group.Title}}</h1>
+          <h1 class="text-2xl md:text-3xl font-light text-center">
+            <button
+              id="title-scroll-top"
+              class="bg-transparent border-0 p-0 m-0 text-current hover:bg-fg hover:text-bg transition-colors duration-200 ease-out px-2 py-1 focus:outline-none"
+            >
+              {{.Group.Title}}
+            </button>
+          </h1>
           {{if or .Group.OriginalURL .Group.ArtistName}}
           <p class="mt-1 text-sm text-fg/60 text-center">
             {{if .Group.ArtistName}}<span>by {{.Group.ArtistName}}</span>{{end}} {{if and .Group.ArtistName
@@ -148,7 +154,7 @@
           {{range .Artworks}}
           <figure id="artwork-{{.ID}}" class="flex flex-col items-center gap-4" data-model="{{.Model}}">
             <div class="w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">
-              {{.SVGContent}}
+              {{template "frame" .SVGContent}}
             </div>
             <figcaption class="text-center text-sm font-bold tracking-wide">{{modelName .Model}}</figcaption>
           </figure>
@@ -238,6 +244,15 @@
             const url = new URL(window.location);
             url.searchParams.delete("model");
             window.location.href = url.toString();
+          });
+        }
+
+        // Scroll title to top when clicked
+        const titleBtn = document.getElementById("title-scroll-top");
+        if (titleBtn) {
+          titleBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
           });
         }
       });

@@ -113,6 +113,7 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		Title      string        `json:"title"`
 		Category   string        `json:"category"`
 		Prompt     string        `json:"prompt"`
+		ArtistName string        `json:"artist_name"`
 		SVGContent template.HTML `json:"svg_content"`
 	}
 
@@ -133,6 +134,7 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 					Title:      group.Title,
 					Category:   group.Category,
 					Prompt:     group.Prompt,
+					ArtistName: group.ArtistName,
 					SVGContent: template.HTML(artwork.SVG),
 				}
 				filteredArtworks = append(filteredArtworks, ga)
