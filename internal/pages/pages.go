@@ -1,10 +1,12 @@
 package pages
 
 import (
+	"crypto/md5"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -48,6 +50,18 @@ func (h *PageHandler) getTemplate() (*template.Template, error) {
 		return h.templateParser(h.tmpl)
 	}
 	return h.tmpl, nil
+}
+
+// getCSSHash computes and returns the MD5 hash of the output.css file for cache busting
+func (h *PageHandler) getCSSHash() string {
+	cssPath := "static/css/output.css"
+	content, err := os.ReadFile(cssPath)
+	if err != nil {
+		log.Printf("Error reading CSS file for hash: %v", err)
+		return ""
+	}
+	hash := md5.Sum(content)
+	return fmt.Sprintf("%x", hash)
 }
 
 // GalleryHandler handles requests to display the gallery of saved artworks
@@ -157,6 +171,7 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		Categories     []string         `json:"categories"`
 		Category       string           `json:"category"`
 		EditingEnabled bool             `json:"editing_enabled"`
+		CSSHash        string           `json:"css_hash"`
 	}{
 		Title:          "Gallery - Pelican Art Gallery",
 		Groups:         galleryGroups,
@@ -164,6 +179,7 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		Categories:     categories,
 		Category:       category,
 		EditingEnabled: isEditingEnabled(),
+		CSSHash:        h.getCSSHash(),
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -233,10 +249,12 @@ func (h *PageHandler) HomepageHandler(w http.ResponseWriter, r *http.Request) {
 		EditingEnabled   bool                 `json:"editing_enabled"`
 		FeaturedGroup    *models.ArtworkGroup `json:"featured_group,omitempty"`
 		FeaturedArtworks []HomepageArtwork    `json:"featured_artworks,omitempty"`
+		CSSHash          string               `json:"css_hash"`
 	}{
 		EditingEnabled:   config.IsEditingEnabled(),
 		FeaturedGroup:    featuredGroup,
 		FeaturedArtworks: homepageArtworks,
+		CSSHash:          h.getCSSHash(),
 	}
 
 	tmpl, err := h.getTemplate()
@@ -295,10 +313,12 @@ func (h *PageHandler) WorkshopHandler(w http.ResponseWriter, r *http.Request) {
 		Models       []models.ModelInfo   `json:"models"`
 		EditGroup    *models.ArtworkGroup `json:"edit_group,omitempty"`
 		EditArtworks []models.Artwork     `json:"edit_artworks,omitempty"`
+		CSSHash      string               `json:"css_hash"`
 	}{
 		Models:       templateData.Models,
 		EditGroup:    editGroup,
 		EditArtworks: editArtworks,
+		CSSHash:      h.getCSSHash(),
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -403,12 +423,14 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		Artworks       []ArtworkWithHTML
 		EditingEnabled bool
 		ModelFilters   []string
+		CSSHash        string
 	}{
 		Title:          "Artwork Group - Pelican Art Gallery",
 		Group:          group,
 		Artworks:       artList,
 		EditingEnabled: isEditingEnabled(),
 		ModelFilters:   modelFilters,
+		CSSHash:        h.getCSSHash(),
 	}
 
 	tmpl, err := h.getTemplate()
