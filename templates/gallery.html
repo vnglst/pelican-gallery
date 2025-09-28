@@ -10,79 +10,7 @@
   </head>
   <body class="bg-bg text-fg font-sans antialiased min-h-screen">
     <div class="min-h-screen flex">
-      <!-- Collapsible Filter Sidebar -->
-      <aside id="filter-sidebar" class="fixed right-0 top-0 h-full w-80 bg-bg border-l border-border transform translate-x-full transition-transform duration-300 ease-out z-100 shadow-xl">
-        <div class="p-6">
-          <header class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold">Filter by Model</h2>
-            <button
-              id="close-sidebar"
-              class="w-8 h-8 flex items-center justify-center hover:bg-fg hover:text-bg transition-colors duration-200 text-xl font-bold leading-none"
-              aria-label="Close sidebar"
-            >
-              ×
-            </button>
-          </header>
-
-          <form>
-            <fieldset class="space-y-4">
-              <legend class="sr-only">Select AI models to filter by</legend>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="model" value="openai" {{if contains $.ModelFilters "openai"}}checked{{end}}
-                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
-                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
-                accent-black" />
-                <span class="text-sm font-medium">OpenAI</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="model" value="anthropic" {{if contains $.ModelFilters
-                "anthropic"}}checked{{end}} class="model-filter-checkbox w-4 h-4 text-black bg-white border
-                border-border focus:ring-2 focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black
-                checked:border-black accent-black" />
-                <span class="text-sm font-medium">Anthropic</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="model" value="google" {{if contains $.ModelFilters "google"}}checked{{end}}
-                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
-                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
-                accent-black" />
-                <span class="text-sm font-medium">Google</span>
-              </label>
-              <label class="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" name="model" value="other" {{if contains $.ModelFilters "other"}}checked{{end}}
-                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
-                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
-                accent-black" />
-                <span class="text-sm font-medium">Other</span>
-              </label>
-            </fieldset>
-
-            <div class="flex items-center justify-between pt-6 mt-6 border-t border-border">
-              {{if $.ModelFilters}}
-              <button
-                type="button"
-                id="clear-filters"
-                class="px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors duration-200 text-sm font-medium"
-              >
-                Clear All
-              </button>
-              {{else}}
-              <div></div>
-              {{end}}
-              <button
-                type="button"
-                id="apply-filters"
-                class="px-6 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </form>
-        </div>
-      </aside>
-
-      <!-- Overlay -->
-      <div id="sidebar-overlay" class="fixed inset-0 z-50 bg-black/50 hidden transition-opacity duration-300 ease-out"></div>
+      <!-- Filtering moved to artwork-group pages. The gallery no longer shows the sidebar/overlay. -->
 
       <!-- Main content -->
       <div class="flex-1 min-w-0">
@@ -102,7 +30,7 @@
             <div class="flex gap-3 justify-center w-max min-w-full mx-auto">
               {{range .Categories}}
               <a
-                href="/gallery/category/{{.}}{{if $.ModelFilters}}?{{range $index, $filter := $.ModelFilters}}{{if $index}}&{{end}}model={{$filter}}{{end}}{{end}}"
+                href="/gallery/category/{{.}}"
                 class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out {{if eq $.Category .}}bg-fg text-bg font-bold{{else}}hover:bg-fg hover:text-bg{{end}}"
               >
                 {{.}}
@@ -115,65 +43,18 @@
       {{end}}
 
       <main class="flex-1 w-full max-w-6xl mx-auto px-6 pb-12">
-        {{if .Groups}}
-        <div class="space-y-0">
-          {{range .Groups}}
-          <section id="group-{{.ID}}" class="space-y-0" aria-labelledby="group-title-{{.ID}}">
-            <header class="sticky top-16 z-10 bg-bg pt-6 pb-2 px-6">
-              <div class="flex items-center justify-center gap-4">
-                <h2 id="group-title-{{.ID}}" class="text-xl md:text-2xl font-light text-center hover:text-fg/80 transition-colors duration-200 ease-out">
-                  <a href="#group-{{.ID}}">{{.Title}}</a>
-                </h2>
-                {{if $.EditingEnabled}}
-                <a
-                  href="/workshop?edit={{.ID}}"
-                  class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium hover:bg-fg hover:text-bg transition-colors duration-200 ease-out"
-                  title="Edit this artwork group"
-                  aria-label="Edit {{.Title}} artwork group"
-                >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                </a>
-                {{end}}
-              </div>
-            </header>
-            <p class="text-center text-sm text-fg/60 my-2 max-w-2xl mx-auto">{{.Prompt}}</p>
-            {{if .OriginalURL}}
-            <p class="text-center mb-8">
-              <a
-                href="{{.OriginalURL}}"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-2 text-sm text-fg/60 hover:text-fg transition-colors duration-200 ease-out"
-                aria-label="View original artwork reference"
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15,3 21,3 21,9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-                View original
-              </a>
-            </p>
-            {{end}}
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-20 pb-16 mx-auto">
-              {{range .Artworks}}
-              <figure
-                class="aspect-square flex flex-col items-center justify-between max-h-[50vh] overflow-hidden"
-                data-artwork-id="{{.ID}}"
-                data-model="{{.Model}}"
-              >
+        {{if .Artworks}}
+        <div class="py-16">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-16">
+            {{range .Artworks}}
+            <div class="group">
+              <a href="/group/{{.GroupID}}" class="block aspect-square overflow-hidden flex items-center justify-center"
+                data-artwork-id="{{.ID}}" data-model="{{.Model}}">
                 {{.SVGContent}}
-                <figcaption class="text-center mt-4 text-xs font-bold">
-                  {{modelName .Model}}
-                </figcaption>
-              </figure>
-                {{end}}
+              </a>
             </div>
-          </section>
-          {{end}}
+            {{end}}
+          </div>
         </div>
         {{else}}
         <section class="flex flex-col items-center justify-center text-center py-20 space-y-8" aria-labelledby="empty-state-title">
@@ -210,17 +91,8 @@
         </div>
       </div>
 
-    <!-- Floating action buttons -->
+    <!-- Floating action buttons (create only) -->
     <nav class="fixed bottom-8 right-8 flex flex-col gap-3" aria-label="Quick actions">
-      <button
-        id="filter-toggle"
-        class="flex items-center justify-center w-14 h-14 bg-bg border border-border hover:bg-fg hover:text-bg transition-colors duration-200 ease-out shadow-lg"
-        aria-label="Open filter sidebar"
-      >
-        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-        </svg>
-      </button>
       {{if .EditingEnabled}}
       <a
         href="/workshop"
@@ -233,107 +105,5 @@
       </a>
       {{end}}
     </nav>
-
-    <script>
-      // Model filter functionality
-      document.addEventListener("DOMContentLoaded", function () {
-        const filterToggle = document.getElementById("filter-toggle");
-        const sidebar = document.getElementById("filter-sidebar");
-        const sidebarOverlay = document.getElementById("sidebar-overlay");
-        const closeSidebar = document.getElementById("close-sidebar");
-        const applyFiltersButton = document.getElementById("apply-filters");
-        const clearButton = document.getElementById("clear-filters");
-        const checkboxes = document.querySelectorAll(".model-filter-checkbox");
-
-        // Toggle sidebar
-        filterToggle.addEventListener("click", function () {
-          toggleSidebar();
-        });
-
-        // Close sidebar
-        closeSidebar.addEventListener("click", function () {
-          hideSidebar();
-        });
-
-        // Close sidebar when clicking overlay
-        sidebarOverlay.addEventListener("click", function () {
-          hideSidebar();
-        });
-
-        // Apply filters and close sidebar
-        applyFiltersButton.addEventListener("click", function () {
-          updateFilters();
-          hideSidebar();
-        });
-
-        // Clear filters
-        if (clearButton) {
-          clearButton.addEventListener("click", function () {
-            // Uncheck all checkboxes
-            checkboxes.forEach((checkbox) => {
-              checkbox.checked = false;
-            });
-            // Update URL to remove all filters
-            updateFilters();
-            hideSidebar();
-          });
-        }
-
-        function toggleSidebar() {
-          if (sidebar.classList.contains("translate-x-full")) {
-            showSidebar();
-          } else {
-            hideSidebar();
-          }
-        }
-
-        function showSidebar() {
-          sidebar.classList.remove("translate-x-full");
-          sidebarOverlay.classList.remove("hidden");
-          document.body.style.overflow = "hidden"; // Prevent background scrolling
-        }
-
-        function hideSidebar() {
-          sidebar.classList.add("translate-x-full");
-          sidebarOverlay.classList.add("hidden");
-          document.body.style.overflow = ""; // Restore scrolling
-        }
-
-        function updateFilters() {
-          const checkedBoxes = document.querySelectorAll(".model-filter-checkbox:checked");
-          const selectedModels = Array.from(checkedBoxes).map((cb) => cb.value);
-
-          // Get current URL and remove existing model params
-          const url = new URL(window.location);
-          url.searchParams.delete("model");
-
-          // Add selected model filters
-          selectedModels.forEach((model) => {
-            url.searchParams.append("model", model);
-          });
-
-          // Navigate to new URL
-          window.location.href = url.toString();
-        }
-
-        // Why is this needed?
-        // The generated SVGs might not have a viewBox that fits their content,
-        // for instance when elements are rotated or translated outside the original viewBox.
-        // This script calculates the bounding box of the drawn content and updates the viewBox accordingly.
-        document.querySelectorAll("figure svg").forEach(svg => {
-          // get bounding box of all drawn content
-          const bbox = svg.getBBox();
-
-          // update viewBox to fit content
-          svg.setAttribute(
-            "viewBox",
-            `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`
-          );
-
-          // make sure it scales to container
-          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        });
-      });
-    </script>
   </body>
 </html>

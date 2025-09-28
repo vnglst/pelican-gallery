@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/css/output.css" />
+  </head>
+  <body class="bg-bg text-fg font-sans antialiased min-h-screen">
+    <div class="min-h-screen flex flex-col">
+      <!-- Collapsible Filter Sidebar -->
+      <aside
+        id="filter-sidebar"
+        class="fixed right-0 top-0 h-full w-80 bg-bg border-l border-border transform translate-x-full transition-transform duration-300 ease-out z-100 shadow-xl"
+      >
+        <div class="p-6">
+          <header class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold">Filter by Model</h2>
+            <button
+              id="close-sidebar"
+              class="w-8 h-8 flex items-center justify-center hover:bg-fg hover:text-bg transition-colors duration-200 text-xl font-bold leading-none"
+              aria-label="Close sidebar"
+            >
+              ×
+            </button>
+          </header>
+
+          <form>
+            <fieldset class="space-y-4">
+              <legend class="sr-only">Select AI models to filter by</legend>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" name="model" value="openai" {{if contains .ModelFilters "openai"}}checked{{end}}
+                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
+                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
+                accent-black" />
+                <span class="text-sm font-medium">OpenAI</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" name="model" value="anthropic" {{if contains .ModelFilters
+                "anthropic"}}checked{{end}} class="model-filter-checkbox w-4 h-4 text-black bg-white border
+                border-border focus:ring-2 focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black
+                checked:border-black accent-black" />
+                <span class="text-sm font-medium">Anthropic</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" name="model" value="google" {{if contains .ModelFilters "google"}}checked{{end}}
+                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
+                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
+                accent-black" />
+                <span class="text-sm font-medium">Google</span>
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" name="model" value="other" {{if contains .ModelFilters "other"}}checked{{end}}
+                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
+                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
+                accent-black" />
+                <span class="text-sm font-medium">Other</span>
+              </label>
+            </fieldset>
+
+            <div class="flex items-center justify-between pt-6 mt-6 border-t border-border">
+              {{if $.ModelFilters}}
+              <button
+                type="button"
+                id="clear-filters"
+                class="px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors duration-200 text-sm font-medium"
+              >
+                Clear All
+              </button>
+              {{else}}
+              <div></div>
+              {{end}}
+              <button
+                type="button"
+                id="apply-filters"
+                class="px-6 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </form>
+        </div>
+      </aside>
+
+      <!-- Overlay -->
+      <div
+        id="sidebar-overlay"
+        class="fixed inset-0 z-50 bg-black/50 hidden transition-opacity duration-300 ease-out"
+      ></div>
+
+      <header class="bg-bg border-b border-border">
+        <div class="max-w-6xl mx-auto px-6 py-4">
+          <div class="flex items-center justify-between">
+            <nav>
+              <a
+                href="/gallery"
+                class="text-sm font-semibold hover:bg-fg hover:text-bg transition-colors duration-200 ease-out px-2 py-1"
+                >← Back</a
+              >
+            </nav>
+            <div class="text-center"></div>
+            <div>
+              {{if .EditingEnabled}}
+              <a
+                href="/workshop?edit={{.Group.ID}}"
+                class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium border border-border rounded hover:bg-fg hover:text-bg transition-colors duration-200 ease-out"
+                title="Edit this artwork group"
+                aria-label="Edit {{.Group.Title}}"
+              >
+                <svg
+                  class="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                Edit
+              </a>
+              {{end}}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Sticky title only -->
+      <div class="sticky top-0 z-20 bg-bg border-b border-border">
+        <div class="max-w-6xl mx-auto px-6 py-3">
+          <h1 class="text-2xl md:text-3xl font-light text-center">{{.Group.Title}}</h1>
+          {{if or .Group.OriginalURL .Group.ArtistName}}
+          <p class="mt-1 text-sm text-fg/60 text-center">
+            {{if .Group.ArtistName}}<span>by {{.Group.ArtistName}}</span>{{end}} {{if and .Group.ArtistName
+            .Group.OriginalURL}} · {{end}} {{if .Group.OriginalURL}}
+            <a href="{{.Group.OriginalURL}}" target="_blank" rel="noopener noreferrer" class="hover:underline"
+              >View original</a
+            >
+            {{end}}
+          </p>
+          {{end}}
+        </div>
+      </div>
+
+      <main class="flex-1 w-full max-w-6xl mx-auto px-6 py-8">
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-12">
+          {{range .Artworks}}
+          <figure id="artwork-{{.ID}}" class="flex flex-col items-center gap-4" data-model="{{.Model}}">
+            <div class="w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">
+              {{.SVGContent}}
+            </div>
+            <figcaption class="text-center text-sm font-bold tracking-wide">{{modelName .Model}}</figcaption>
+          </figure>
+          {{end}}
+        </section>
+      </main>
+
+      {{template "footer" .}}
+    </div>
+
+    <!-- Floating action buttons -->
+    <nav class="fixed bottom-8 right-8 flex flex-col gap-3" aria-label="Quick actions">
+      <button
+        id="filter-toggle"
+        class="flex items-center justify-center w-14 h-14 bg-bg border border-border hover:bg-fg hover:text-bg transition-colors duration-200 ease-out shadow-lg"
+        aria-label="Open filter sidebar"
+      >
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+          />
+        </svg>
+      </button>
+      {{if .EditingEnabled}}
+      <a
+        href="/workshop?edit={{.Group.ID}}"
+        class="flex items-center justify-center w-14 h-14 bg-bg border border-border hover:bg-fg hover:text-bg transition-colors duration-200 ease-out shadow-lg"
+        aria-label="Edit this artwork group"
+      >
+        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </a>
+      {{end}}
+    </nav>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const filterToggle = document.getElementById("filter-toggle");
+        const sidebar = document.getElementById("filter-sidebar");
+        const sidebarOverlay = document.getElementById("sidebar-overlay");
+        const closeSidebar = document.getElementById("close-sidebar");
+        const applyFiltersButton = document.getElementById("apply-filters");
+        const clearButton = document.getElementById("clear-filters");
+
+        // Toggle sidebar
+        function toggleSidebar() {
+          if (sidebar.classList.contains("translate-x-full")) {
+            showSidebar();
+          } else {
+            hideSidebar();
+          }
+        }
+
+        function showSidebar() {
+          sidebar.classList.remove("translate-x-full");
+          sidebarOverlay.classList.remove("hidden");
+          document.body.style.overflow = "hidden"; // Prevent background scrolling
+        }
+
+        function hideSidebar() {
+          sidebar.classList.add("translate-x-full");
+          sidebarOverlay.classList.add("hidden");
+          document.body.style.overflow = ""; // Restore scrolling
+        }
+
+        if (filterToggle) filterToggle.addEventListener("click", toggleSidebar);
+        if (closeSidebar) closeSidebar.addEventListener("click", hideSidebar);
+        if (sidebarOverlay) sidebarOverlay.addEventListener("click", hideSidebar);
+
+        // Apply filters and close sidebar
+        if (applyFiltersButton) {
+          applyFiltersButton.addEventListener("click", function () {
+            const checkedBoxes = document.querySelectorAll(".model-filter-checkbox:checked");
+            const selectedModels = Array.from(checkedBoxes).map((cb) => cb.value);
+            const url = new URL(window.location);
+            url.searchParams.delete("model");
+            selectedModels.forEach((model) => url.searchParams.append("model", model));
+            window.location.href = url.toString();
+          });
+        }
+
+        // Clear filters
+        if (clearButton) {
+          clearButton.addEventListener("click", function () {
+            document.querySelectorAll(".model-filter-checkbox").forEach((cb) => (cb.checked = false));
+            const url = new URL(window.location);
+            url.searchParams.delete("model");
+            window.location.href = url.toString();
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

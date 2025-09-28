@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"pelican-gallery/internal/config"
@@ -19,11 +20,6 @@ const (
 	FilterGoogle    = "google"
 	FilterOther     = "other"
 )
-
-// containsIgnoreCase performs case-insensitive substring matching
-func containsIgnoreCase(s, substr string) bool {
-	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
-}
 
 // TemplateParser is a function type for parsing templates
 type TemplateParser func(*template.Template) (*template.Template, error)
@@ -63,8 +59,7 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 
 	category := r.URL.Query().Get("category")
 
-	// Parse model filter query params (can be multiple)
-	modelFilters := r.URL.Query()["model"] // e.g. ?model=openai&model=google
+	// No model filtering on gallery page — show all artworks for the selected category
 
 	// If no category specified, redirect to first available category
 	if category == "" {
@@ -94,29 +89,20 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Helper: returns true if artwork's model matches any selected filter
-	modelMatches := func(model string) bool {
-		if len(modelFilters) == 0 {
-			return true // No filter: show all
+	// Only include artworks from these three models (case-insensitive substring match)
+	allowedModelSubs := []string{
+		"anthropic/claude-sonnet-4",
+		"google/gemini-2.5-pro",
+		"openai/gpt-5",
+	}
+	allowedModelsContains := func(model string) bool {
+		if model == "" {
+			return false
 		}
-		for _, filter := range modelFilters {
-			switch filter {
-			case FilterOpenAI:
-				if containsIgnoreCase(model, FilterOpenAI) {
-					return true
-				}
-			case FilterAnthropic:
-				if containsIgnoreCase(model, FilterAnthropic) {
-					return true
-				}
-			case FilterGoogle:
-				if containsIgnoreCase(model, FilterGoogle) {
-					return true
-				}
-			case FilterOther:
-				if !containsIgnoreCase(model, FilterOpenAI) && !containsIgnoreCase(model, FilterAnthropic) && !containsIgnoreCase(model, FilterGoogle) {
-					return true
-				}
+		low := strings.ToLower(model)
+		for _, sub := range allowedModelSubs {
+			if low == strings.ToLower(sub) {
+				return true
 			}
 		}
 		return false
@@ -136,18 +122,22 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var galleryGroups []GalleryGroup
+	var flatArtworks []GalleryArtwork
 	for _, group := range groups {
 		artworks := artworkMap[group.ID]
 		var filteredArtworks []GalleryArtwork
 		for _, artwork := range artworks {
-			if modelMatches(artwork.Model) {
-				filteredArtworks = append(filteredArtworks, GalleryArtwork{
+			if allowedModelsContains(artwork.Model) {
+				ga := GalleryArtwork{
 					Artwork:    artwork,
 					Title:      group.Title,
 					Category:   group.Category,
 					Prompt:     group.Prompt,
 					SVGContent: template.HTML(artwork.SVG),
-				})
+				}
+				filteredArtworks = append(filteredArtworks, ga)
+				// append to flat list as well
+				flatArtworks = append(flatArtworks, ga)
 			}
 		}
 		galleryGroups = append(galleryGroups, GalleryGroup{
@@ -159,19 +149,19 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Fetched %d groups with artworks and %d categories for gallery", len(galleryGroups), len(categories))
 
 	data := struct {
-		Title          string         `json:"title"`
-		Groups         []GalleryGroup `json:"groups"`
-		Categories     []string       `json:"categories"`
-		Category       string         `json:"category"`
-		EditingEnabled bool           `json:"editing_enabled"`
-		ModelFilters   []string       `json:"model_filters"`
+		Title          string           `json:"title"`
+		Groups         []GalleryGroup   `json:"groups"`
+		Artworks       []GalleryArtwork `json:"artworks"`
+		Categories     []string         `json:"categories"`
+		Category       string           `json:"category"`
+		EditingEnabled bool             `json:"editing_enabled"`
 	}{
 		Title:          "Gallery - Pelican Art Gallery",
 		Groups:         galleryGroups,
+		Artworks:       flatArtworks,
 		Categories:     categories,
 		Category:       category,
 		EditingEnabled: isEditingEnabled(),
-		ModelFilters:   modelFilters,
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -320,6 +310,115 @@ func (h *PageHandler) WorkshopHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := tmpl.ExecuteTemplate(w, "workshop.html", currentTemplateData); err != nil {
 		log.Printf("Failed to execute template: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// ArtworkGroupHandler shows a page dedicated to a group and all its artworks
+func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Expect path like /group/123 or /group/123/
+	raw := strings.TrimPrefix(r.URL.Path, "/group/")
+	raw = strings.TrimSuffix(raw, "/")
+	if raw == "" {
+		log.Printf("ArtworkGroupHandler: empty group id in path: %q", r.URL.Path)
+		http.NotFound(w, r)
+		return
+	}
+
+	id, err := strconv.Atoi(raw)
+	if err != nil {
+		log.Printf("ArtworkGroupHandler: failed to parse group id from path %q: %v", r.URL.Path, err)
+		http.NotFound(w, r)
+		return
+	}
+
+	group, err := h.db.GetGroup(id)
+	if err != nil {
+		log.Printf("ArtworkGroupHandler: GetGroup(%d) error: %v", id, err)
+		http.NotFound(w, r)
+		return
+	}
+
+	// Parse model filters from query parameters (can be multiple)
+	modelFilters := r.URL.Query()["model"]
+
+	artworks, err := h.db.ListArtworksByGroup(id)
+	if err != nil {
+		log.Printf("Error fetching artworks for group %d: %v", id, err)
+		http.Error(w, "Failed to load artworks", http.StatusInternalServerError)
+		return
+	}
+
+	// If model filters are present, filter the artworks accordingly
+	// Supported filters: "openai", "anthropic", "google", "other"
+	var filtered []models.Artwork
+	if len(modelFilters) == 0 {
+		filtered = artworks
+	} else {
+		for _, a := range artworks {
+			show := false
+			lowModel := strings.ToLower(a.Model)
+			for _, f := range modelFilters {
+				ff := strings.ToLower(f)
+				if ff == "other" {
+					if !(strings.Contains(lowModel, "openai") || strings.Contains(lowModel, "anthropic") || strings.Contains(lowModel, "google")) {
+						show = true
+						break
+					}
+				} else {
+					if strings.Contains(lowModel, ff) {
+						show = true
+						break
+					}
+				}
+			}
+			if show {
+				filtered = append(filtered, a)
+			}
+		}
+	}
+
+	// Build template data using the filtered list
+	type ArtworkWithHTML struct {
+		models.Artwork
+		SVGContent template.HTML
+	}
+
+	var artList []ArtworkWithHTML
+	for _, a := range filtered {
+		artList = append(artList, ArtworkWithHTML{Artwork: a, SVGContent: template.HTML(a.SVG)})
+	}
+
+	data := struct {
+		Title          string
+		Group          *models.ArtworkGroup
+		Artworks       []ArtworkWithHTML
+		EditingEnabled bool
+		ModelFilters   []string
+	}{
+		Title:          "Artwork Group - Pelican Art Gallery",
+		Group:          group,
+		Artworks:       artList,
+		EditingEnabled: isEditingEnabled(),
+		ModelFilters:   modelFilters,
+	}
+
+	tmpl, err := h.getTemplate()
+	if err != nil {
+		log.Printf("Error getting template: %v", err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	if err := tmpl.ExecuteTemplate(w, "artwork-group.html", data); err != nil {
+		log.Printf("Failed to execute artwork-group template: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}

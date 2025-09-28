@@ -307,6 +307,10 @@ func main() {
 		pageHandler.GalleryHandler(w, r)
 	})
 
+	mux.HandleFunc("/group/", func(w http.ResponseWriter, r *http.Request) {
+		pageHandler.ArtworkGroupHandler(w, r)
+	})
+
 	mux.HandleFunc("/api/generate", rateLimiter.Middleware(apiHandler.GenerateArtworkHandler))
 	mux.HandleFunc("/api/delete-artwork/", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
 		// Extract ID from path
