@@ -210,25 +210,38 @@ func (h *PageHandler) HomepageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get a random group with artworks from anthropic/claude-sonnet-4 and openai/gpt-5
-	randomGroup, randomArtworks, err := h.db.GetRandomGroupWithModelArtworks("anthropic/claude-sonnet-4", "openai/gpt-5")
-	var featuredGroup *models.ArtworkGroup
+	// Get the Starry Night group (group_id = 86) with specific artworks
+	featuredGroup, err := h.db.GetGroup(86)
 	var featuredArtworks []models.Artwork
 
 	if err != nil {
-		log.Printf("No random group found with both models, trying fallback: %v", err)
-		// Fallback: try to get any random group with artworks from either model
-		randomGroup, randomArtworks, err = h.db.GetRandomGroupWithModelArtworks("anthropic", "openai")
-		if err != nil {
-			log.Printf("No fallback group found either: %v", err)
-			// If still no group found, just continue without featured content
-		} else {
-			featuredGroup = randomGroup
-			featuredArtworks = randomArtworks
-		}
+		log.Printf("Error fetching Starry Night group: %v", err)
+		// If group not found, just continue without featured content
 	} else {
-		featuredGroup = randomGroup
-		featuredArtworks = randomArtworks
+		// Get all artworks for the Starry Night group
+		allArtworks, err := h.db.ListArtworksByGroup(86)
+		if err != nil {
+			log.Printf("Error fetching artworks for Starry Night: %v", err)
+		} else {
+			// Find the specific artworks we want to feature
+			var gpt35Artwork, gpt5Artwork *models.Artwork
+			for i, artwork := range allArtworks {
+				if artwork.Model == "openai/gpt-3.5-turbo" {
+					gpt35Artwork = &allArtworks[i]
+				}
+				if artwork.Model == "openai/gpt-5" {
+					gpt5Artwork = &allArtworks[i]
+				}
+			}
+
+			// Add them in order: GPT-3.5 first, then GPT-5
+			if gpt35Artwork != nil {
+				featuredArtworks = append(featuredArtworks, *gpt35Artwork)
+			}
+			if gpt5Artwork != nil {
+				featuredArtworks = append(featuredArtworks, *gpt5Artwork)
+			}
+		}
 	}
 
 	type HomepageArtwork struct {

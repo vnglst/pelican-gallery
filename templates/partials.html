@@ -1,42 +1,56 @@
 {{define "footer"}}
 <footer class="w-full max-w-6xl mx-auto px-6 py-8 border-t border-border">
-  <div class="flex flex-col md:flex-row items-center justify-between gap-2">
-    <p class="text-sm text-fg/70 font-medium">
+  <div class="flex flex-col md:flex-row items-center justify-center gap-2 md:gap-6 text-sm text-fg/70">
+    <p class="font-medium">
       Created by
       <a
         href="https://koenvangilst.nl"
         target="_blank"
         rel="noopener noreferrer"
-        class="font-semibold hover:bg-fg hover:text-bg transition-colors duration-200 ease-out px-2 py-1"
+        class="font-semibold hover:bg-fg hover:text-bg px-2 py-1"
       >
         Koen van Gilst
       </a>
     </p>
 
-    <div class="flex items-center gap-3">
+    <span class="hidden md:inline text-fg/40">|</span>
+
+    <p class="text-center font-medium">
+      Inspired by
       <a
-        href="https://github.com/vnglst/pelican-gallery"
+        href="https://simonwillison.net/2025/Jun/6/six-months-in-llms/"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="View source on GitHub"
-        class="inline-flex items-center text-sm font-semibold text-fg/80 hover:bg-fg hover:text-bg transition-colors duration-200 ease-out px-2 py-1 rounded"
+        class="font-semibold hover:bg-fg hover:text-bg px-2 py-1"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="w-5 h-5 mr-2"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            fill-rule="evenodd"
-            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.428 2.865 8.19 6.839 9.525.5.092.682-.217.682-.483 0-.237-.009-.866-.014-1.7-2.782.605-3.369-1.342-3.369-1.342-.454-1.157-1.11-1.466-1.11-1.466-.908-.62.069-.607.069-.607 1.004.071 1.532 1.033 1.532 1.033.892 1.529 2.341 1.088 2.91.833.091-.647.35-1.088.636-1.338-2.22-.254-4.555-1.112-4.555-4.948 0-1.092.39-1.986 1.03-2.686-.103-.254-.447-1.277.098-2.66 0 0 .84-.27 2.75 1.025A9.564 9.564 0 0 1 12 6.845c.85.004 1.705.115 2.505.337 1.91-1.295 2.75-1.025 2.75-1.025.546 1.383.202 2.406.099 2.66.64.7 1.03 1.594 1.03 2.686 0 3.847-2.338 4.69-4.566 4.941.359.31.679.92.679 1.855 0 1.338-.012 2.419-.012 2.749 0 .269.18.58.688.482C19.137 20.205 22 16.445 22 12.017 22 6.484 17.523 2 12 2z"
-            clip-rule="evenodd"
-          />
-        </svg>
-        View source on GitHub
+        Simon Willison's pelican benchmark
       </a>
-    </div>
+    </p>
+
+    <span class="hidden md:inline text-fg/40">|</span>
+
+    <a
+      href="https://github.com/vnglst/pelican-gallery"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="View source on GitHub"
+      class="inline-flex items-center font-semibold text-fg/80 hover:bg-fg hover:text-bg px-2 py-1 rounded"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        class="w-4 h-4 mr-1.5"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          fill-rule="evenodd"
+          d="M12 2C6.477 2 2 6.484 2 12.017c0 4.428 2.865 8.19 6.839 9.525.5.092.682-.217.682-.483 0-.237-.009-.866-.014-1.7-2.782.605-3.369-1.342-3.369-1.342-.454-1.157-1.11-1.466-1.11-1.466-.908-.62.069-.607.069-.607 1.004.071 1.532 1.033 1.532 1.033.892 1.529 2.341 1.088 2.91.833.091-.647.35-1.088.636-1.338-2.22-.254-4.555-1.112-4.555-4.948 0-1.092.39-1.986 1.03-2.686-.103-.254-.447-1.277.098-2.66 0 0 .84-.27 2.75 1.025A9.564 9.564 0 0 1 12 6.845c.85.004 1.705.115 2.505.337 1.91-1.295 2.75-1.025 2.75-1.025.546 1.383.202 2.406.099 2.66.64.7 1.03 1.594 1.03 2.686 0 3.847-2.338 4.69-4.566 4.941.359.31.679.92.679 1.855 0 1.338-.012 2.419-.012 2.749 0 .269.18.58.688.482C19.137 20.205 22 16.445 22 12.017 22 6.484 17.523 2 12 2z"
+          clip-rule="evenodd"
+        />
+      </svg>
+      View source on GitHub
+    </a>
   </div>
 </footer>
 {{end}} {{define "plausible"}}

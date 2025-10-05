@@ -16,18 +16,23 @@
         </h1>
       </header>
 
-      <main class="flex-1 w-full max-w-6xl mx-auto px-6 pb-12">
-        <div class="flex flex-col justify-center w-full max-w-2xl mx-auto text-center space-y-4">
+      <main class="flex-1 w-full max-w-6xl mx-auto px-6 md:px-12 pb-20">
+        <div class="flex flex-col justify-center w-full mx-auto space-y-8">
+          <!-- Hero Section with headline -->
+          <section class="text-center space-y-6 max-w-4xl mx-auto pt-8">
+            <h2 class="text-4xl md:text-5xl font-light leading-tight">Can an LLM Draw Starry Night from Memory?</h2>
+            <p class="text-xl md:text-2xl text-fg/80 font-light">
+              Comparing how AI models recreate famous paintings using only code
+            </p>
+          </section>
+
           {{if .FeaturedGroup}}
+          <!-- Hero Images -->
           <section class="space-y-6" aria-labelledby="featured-artworks">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
               {{range $index, $artwork := .FeaturedArtworks}}{{if lt $index 2}}
-              <a
-                href="/gallery/category/{{$.FeaturedGroup.Category}}"
-                class="block group {{if eq $index 1}}hidden md:block{{end}}"
-                aria-label="View artwork created by {{modelName $artwork.Model}}"
-              >
-                <figure class="overflow-hidden">
+              <a href="/group/{{$.FeaturedGroup.ID}}" class="block space-y-3 group">
+                <figure class="overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]">
                   {{if $artwork.SVG}}
                   <div class="w-full aspect-square flex items-center justify-center p-4">
                     {{template "frame" $artwork.SVGContent}}
@@ -52,39 +57,64 @@
                   </div>
                   {{end}}
                 </figure>
+                <figcaption class="text-center text-lg font-medium text-fg/80 group-hover:text-fg transition-colors">
+                  {{if eq $index 0}}GPT-3.5 Turbo (2022){{else}}GPT-5 (2025){{end}}
+                </figcaption>
               </a>
               {{end}}{{end}}
             </div>
+            <p class="text-center text-lg text-fg/70 italic mt-2">Same prompt. Three years apart.</p>
           </section>
           {{else}} {{end}}
 
-          <section class="space-y-6" aria-labelledby="about-section">
-            <p class="text-lg md:text-xl leading-relaxed text-fg/90 font-normal">
-              What happens when you ask large language models to recreate famous paintings as simple vector graphics?
-              This gallery shows their attempts to turn artworks into SVG images. What makes this interesting isn’t that
-              GenAI can generate images from prompts - specialized models already do that. It’s how they combine
-              knowledge of art with the ability to write SVG code.
-            </p>
-            <p class="text-lg md:text-xl leading-relaxed text-fg/90 font-normal">
-              The project is inspired by
+          <!-- Explanation -->
+          <section class="space-y-8 text-center max-w-3xl mx-auto" aria-labelledby="about-section">
+            <div class="space-y-6 text-lg md:text-xl leading-relaxed text-fg/90 font-normal">
+              <p>
+                Large language models can't generate images. They can only write code. So I asked them to recreate
+                famous paintings as SVG files, using nothing but their memory of what each artwork looks like.
+              </p>
+              <p>
+                No reference images. No examples. Just the model's training data and whatever it learned about art,
+                composition, and color from text descriptions and code examples.
+              </p>
+              <p>
+                I tested this across 15+ models released between 2022 and 2025, including OpenAI's GPT series,
+                Anthropic's Claude, Google's Gemini, and open source models from DeepSeek and others.
+              </p>
+            </div>
+
+            <!-- CTA Button -->
+            <nav class="mt-12">
               <a
-                href="https://simonwillison.net/2025/Jun/6/six-months-in-llms/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="font-semibold underline decoration-2 underline-offset-4 hover:bg-fg hover:text-bg hover:no-underline hover:shadow-medium hover:-translate-y-1 transition-all duration-200 ease-out px-2 py-1"
-                >Simon Willison's practice</a
+                href="/group/86"
+                class="inline-block text-base font-semibold tracking-wide bg-fg text-bg hover:bg-fg/90 transition-all duration-200 ease-out px-8 py-4 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                aria-label="Compare all models' attempts at Starry Night"
               >
-              of using this as a creative LLM benchmark. When a new model is released, one of his first tests is whether
-              it can generate a pelican on a bicycle.
-            </p>
-            <nav class="my-16">
-              <a
-                href="/gallery"
-                class="inline-block text-sm font-medium tracking-wide uppercase hover:bg-fg hover:text-bg transition-all duration-200 ease-out px-4 py-2 border border-border"
-                aria-label="Browse the complete art gallery"
-              >
-                View Gallery
+                Compare All Models →
               </a>
+            </nav>
+
+            <!-- Secondary Navigation -->
+            <nav class="mt-8">
+              <p class="text-base text-fg/70 mb-4">See other artworks:</p>
+              <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 text-base text-fg/70">
+                <a href="/group/81" class="underline hover:text-fg">The Scream</a>
+                <span class="text-fg/40">|</span>
+                <a href="/group/71" class="underline hover:text-fg">Mona Lisa</a>
+                <span class="text-fg/40">|</span>
+                <a href="/group/78" class="underline hover:text-fg">Vitruvian Man</a>
+                <span class="text-fg/40">|</span>
+                <a href="/group/90" class="underline hover:text-fg">Medusa</a>
+                <span class="text-fg/40">|</span>
+                <a href="/group/58" class="underline hover:text-fg">Night Watch</a>
+                <span class="text-fg/40">|</span>
+                <a href="/group/54" class="underline hover:text-fg">Victory Boogie Woogie</a>
+                <span class="text-fg/40">|</span>
+                <a href="/group/74" class="underline hover:text-fg">Tank Man</a>
+                <span class="text-fg/40">|</span>
+                <a href="/group/75" class="underline hover:text-fg">Man on the Moon</a>
+              </div>
             </nav>
           </section>
         </div>
