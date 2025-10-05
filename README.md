@@ -1,6 +1,12 @@
 # Pelican Art Gallery
 
-What happens when you ask an AI to draw famous paintings as simple computer graphics? This project shows how language models—usually built for text—try to turn classic artworks into SVG images. Even though these AIs aren't trained to make vector graphics, it's fun to see how they mix what they know about art with their ability to write SVG code. This project is inspired by [Simon Willison's article](https://simonwillison.net/2025/Jun/6/six-months-in-llms/) about creative LLM benchmarks.
+Large language models can't generate images. They can only write code. So I asked them to recreate famous paintings as SVG files, using nothing but their memory of what each artwork looks like.
+
+No reference images. No examples. Just the model's training data and whatever it learned about art, composition, and color from text descriptions and code examples.
+
+I tested this across 15+ models released between 2022 and 2025, including OpenAI's GPT series, Anthropic's Claude, Google's Gemini, and open source models from DeepSeek and others.
+
+This project is inspired by [Simon Willison's pelican benchmark](https://simonwillison.net/2025/Jun/6/six-months-in-llms/).
 
 ## Quick Start
 
