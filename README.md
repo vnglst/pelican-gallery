@@ -10,11 +10,13 @@ This project is inspired by [Simon Willison's pelican benchmark](https://simonwi
 
 ## Quick Start
 
-1. **Clone the repository**
+1. **Clone the repository and fetch LFS assets**
 
    ```bash
    git clone <repository-url>
-   cd genartifacts
+   cd pelican-gallery
+   git lfs install --local
+   git lfs pull
    ```
 
 2. **Set up environment**
@@ -32,6 +34,14 @@ This project is inspired by [Simon Willison's pelican benchmark](https://simonwi
    ```
 
 4. **Open your browser** to `http://localhost:8080`
+
+## Git LFS
+
+This repository stores the SQLite database (`artworks.db`) using [Git Large File Storage](https://git-lfs.com/).
+
+- Run `git lfs install --local` once per clone to enable the LFS hooks.
+- After cloning or pulling changes, run `git lfs pull` to download the latest database snapshot.
+- When updating `artworks.db`, commit as usual—Git LFS transparently stores the binary contents out of band.
 
 ## Development
 
