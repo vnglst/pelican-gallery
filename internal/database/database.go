@@ -50,6 +50,7 @@ func (db *DB) CreateTables() error {
 		category TEXT NOT NULL DEFAULT '',
         original_url TEXT NOT NULL DEFAULT '',
         artist_name TEXT NOT NULL DEFAULT '',
+		original_artwork BLOB,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 	);
@@ -61,6 +62,7 @@ func (db *DB) CreateTables() error {
 		temperature REAL NOT NULL DEFAULT 0.0,
 		max_tokens INTEGER NOT NULL DEFAULT 0,
 		svg TEXT DEFAULT '',
+		featured BOOLEAN NOT NULL DEFAULT 0,
 		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (group_id) REFERENCES artwork_groups(id) ON DELETE CASCADE
@@ -82,11 +84,11 @@ func (db *DB) CreateTables() error {
 // CreateGroup creates a new artwork group
 func (db *DB) CreateGroup(group models.ArtworkGroup) (int, error) {
 	query := `
-		INSERT INTO artwork_groups (title, prompt, category, original_url, artist_name, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO artwork_groups (title, prompt, category, original_url, artist_name, original_artwork, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		`
 
-	result, err := db.conn.Exec(query, group.Title, group.Prompt, group.Category, group.OriginalURL, group.ArtistName, group.CreatedAt, group.UpdatedAt)
+	result, err := db.conn.Exec(query, group.Title, group.Prompt, group.Category, group.OriginalURL, group.ArtistName, group.OriginalArtwork, group.CreatedAt, group.UpdatedAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create group: %w", err)
 	}
@@ -103,11 +105,11 @@ func (db *DB) CreateGroup(group models.ArtworkGroup) (int, error) {
 func (db *DB) UpdateGroup(group models.ArtworkGroup) error {
 	query := `
 		UPDATE artwork_groups
-		SET title = ?, prompt = ?, category = ?, original_url = ?, artist_name = ?, updated_at = ?
+		SET title = ?, prompt = ?, category = ?, original_url = ?, artist_name = ?, original_artwork = ?, updated_at = ?
 		WHERE id = ?
 		`
 
-	result, err := db.conn.Exec(query, group.Title, group.Prompt, group.Category, group.OriginalURL, group.ArtistName, group.UpdatedAt, group.ID)
+	result, err := db.conn.Exec(query, group.Title, group.Prompt, group.Category, group.OriginalURL, group.ArtistName, group.OriginalArtwork, group.UpdatedAt, group.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update group: %w", err)
 	}
@@ -127,7 +129,7 @@ func (db *DB) UpdateGroup(group models.ArtworkGroup) error {
 // GetGroup retrieves an artwork group by ID
 func (db *DB) GetGroup(id int) (*models.ArtworkGroup, error) {
 	query := `
-	   SELECT id, title, prompt, category, original_url, artist_name, created_at, updated_at
+	   SELECT id, title, prompt, category, original_url, artist_name, original_artwork, created_at, updated_at
 	   FROM artwork_groups
 	   WHERE id = ?
 	   `
@@ -140,6 +142,7 @@ func (db *DB) GetGroup(id int) (*models.ArtworkGroup, error) {
 		&group.Category,
 		&group.OriginalURL,
 		&group.ArtistName,
+		&group.OriginalArtwork,
 		&group.CreatedAt,
 		&group.UpdatedAt,
 	)
@@ -157,7 +160,7 @@ func (db *DB) GetGroup(id int) (*models.ArtworkGroup, error) {
 // ListGroups retrieves all artwork groups
 func (db *DB) ListGroups() ([]models.ArtworkGroup, error) {
 	query := `
-	       SELECT id, title, prompt, category, original_url, artist_name, created_at, updated_at
+	       SELECT id, title, prompt, category, original_url, artist_name, original_artwork, created_at, updated_at
 	       FROM artwork_groups
 	       ORDER BY created_at ASC
 	       `
@@ -176,6 +179,9 @@ func (db *DB) ListGroups() ([]models.ArtworkGroup, error) {
 			&group.Title,
 			&group.Prompt,
 			&group.Category,
+			&group.OriginalURL,
+			&group.ArtistName,
+			&group.OriginalArtwork,
 			&group.CreatedAt,
 			&group.UpdatedAt,
 		)
@@ -195,11 +201,11 @@ func (db *DB) ListGroups() ([]models.ArtworkGroup, error) {
 // CreateArtwork creates a new artwork
 func (db *DB) CreateArtwork(artwork models.Artwork) (int, error) {
 	query := `
-	INSERT INTO artworks (group_id, model, temperature, max_tokens, svg, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO artworks (group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.CreatedAt, artwork.UpdatedAt)
+	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.Featured, artwork.CreatedAt, artwork.UpdatedAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create artwork: %w", err)
 	}
@@ -215,7 +221,7 @@ func (db *DB) CreateArtwork(artwork models.Artwork) (int, error) {
 // GetArtwork retrieves an artwork by ID
 func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, temperature, max_tokens, svg, created_at, updated_at
+	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE id = ?
 	`
@@ -228,6 +234,7 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 		&artwork.Temperature,
 		&artwork.MaxTokens,
 		&artwork.SVG,
+		&artwork.Featured,
 		&artwork.CreatedAt,
 		&artwork.UpdatedAt,
 	)
@@ -245,7 +252,7 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 // ListArtworksByGroup retrieves all artworks for a group
 func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, temperature, max_tokens, svg, created_at, updated_at
+	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE group_id = ?
 	ORDER BY model ASC
@@ -267,6 +274,7 @@ func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
+			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
 		)
@@ -377,12 +385,48 @@ func (db *DB) UpdateArtwork(id int, temperature float64, maxTokens int) error {
 	return nil
 }
 
+// SetFeaturedArtwork sets an artwork as featured and unsets all others in the same group
+func (db *DB) SetFeaturedArtwork(artworkID int) error {
+	// First, get the group_id for this artwork
+	var groupID int
+	err := db.conn.QueryRow("SELECT group_id FROM artworks WHERE id = ?", artworkID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("artwork with ID %d not found", artworkID)
+		}
+		return fmt.Errorf("failed to get artwork group: %w", err)
+	}
+
+	// Unset all featured artworks in this group
+	_, err = db.conn.Exec("UPDATE artworks SET featured = 0 WHERE group_id = ?", groupID)
+	if err != nil {
+		return fmt.Errorf("failed to unset featured artworks: %w", err)
+	}
+
+	// Set this artwork as featured
+	result, err := db.conn.Exec("UPDATE artworks SET featured = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?", artworkID)
+	if err != nil {
+		return fmt.Errorf("failed to set artwork as featured: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("artwork with ID %d not found", artworkID)
+	}
+
+	return nil
+}
+
 // ListGroupsWithArtworks retrieves groups with their associated artworks
 // If category is not empty, filters groups by category
 func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, map[int][]models.Artwork, error) {
 	// Build query with optional category filter
 	query := `
-		SELECT id, title, prompt, category, original_url, artist_name, created_at, updated_at
+		SELECT id, title, prompt, category, original_url, artist_name, original_artwork, created_at, updated_at
 		FROM artwork_groups`
 
 	var args []interface{}
@@ -410,6 +454,7 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 			&group.Category,
 			&group.OriginalURL,
 			&group.ArtistName,
+			&group.OriginalArtwork,
 			&group.CreatedAt,
 			&group.UpdatedAt,
 		)
@@ -442,7 +487,7 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 	}
 
 	artworkQuery := fmt.Sprintf(`
-	SELECT id, group_id, model, temperature, max_tokens, svg, created_at, updated_at
+	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE group_id IN (%s)
 	ORDER BY group_id, model ASC
@@ -469,6 +514,7 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
+			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
 		)
@@ -521,7 +567,7 @@ func (db *DB) GetDistinctCategories() ([]string, error) {
 func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.ArtworkGroup, []models.Artwork, error) {
 	// First, find groups that have artworks from both models
 	query := `
-		SELECT DISTINCT g.id, g.title, g.prompt, g.category, g.original_url, g.artist_name, g.created_at, g.updated_at
+		SELECT DISTINCT g.id, g.title, g.prompt, g.category, g.original_url, g.artist_name, g.original_artwork, g.created_at, g.updated_at
 		FROM artwork_groups g
 		WHERE EXISTS (
 			SELECT 1 FROM artworks a WHERE a.group_id = g.id AND a.model LIKE ?
@@ -541,6 +587,7 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 		&group.Category,
 		&group.OriginalURL,
 		&group.ArtistName,
+		&group.OriginalArtwork,
 		&group.CreatedAt,
 		&group.UpdatedAt,
 	)
@@ -554,7 +601,7 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 
 	// Get artworks for this group, filtered by the two models
 	artworkQuery := `
-		SELECT id, group_id, model, temperature, max_tokens, svg, created_at, updated_at
+		SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
 		FROM artworks
 		WHERE group_id = ? AND (model LIKE ? OR model LIKE ?)
 		ORDER BY CASE
@@ -580,6 +627,7 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
+			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
 		)

@@ -151,6 +151,18 @@
 
       <main class="flex-1 w-full max-w-6xl mx-auto px-6 py-8">
         <section class="grid grid-cols-1 md:grid-cols-2 gap-12">
+          {{if .HasOriginalArtwork}}
+          <figure id="original-artwork" class="flex flex-col items-center gap-4" data-model="original">
+            <div class="w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">
+              <img
+                src="/api/groups/{{.Group.ID}}/original-artwork"
+                alt="Original {{.Group.Title}}"
+                class="max-w-full max-h-full object-contain"
+              />
+            </div>
+            <figcaption class="text-center text-sm font-bold tracking-wide">Original Artwork</figcaption>
+          </figure>
+          {{end}}
           {{range .Artworks}}
           <figure id="artwork-{{.ID}}" class="flex flex-col items-center gap-4" data-model="{{.Model}}">
             <div class="w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">

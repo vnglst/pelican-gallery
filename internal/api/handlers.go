@@ -585,3 +585,130 @@ func (h *Handler) ListModelsHandler(w http.ResponseWriter, r *http.Request) {
 		"models": models,
 	})
 }
+
+// UploadOriginalArtworkHandler handles POST /api/groups/{id}/original-artwork
+func (h *Handler) UploadOriginalArtworkHandler(w http.ResponseWriter, r *http.Request, groupIDStr string) {
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork editing is currently disabled")
+		return
+	}
+
+	groupID, err := strconv.Atoi(groupIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid group ID")
+		return
+	}
+
+	// Parse multipart form with 10MB max memory
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		log.Printf("Error parsing multipart form: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "Failed to parse form")
+		return
+	}
+
+	file, header, err := r.FormFile("artwork")
+	if err != nil {
+		log.Printf("Error getting file from form: %v", err)
+		writeJSONError(w, http.StatusBadRequest, "No file provided")
+		return
+	}
+	defer file.Close()
+
+	// Validate file type (accept common image formats)
+	contentType := header.Header.Get("Content-Type")
+	validTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/jpg":  true,
+		"image/png":  true,
+		"image/gif":  true,
+		"image/webp": true,
+	}
+
+	if !validTypes[contentType] {
+		writeJSONError(w, http.StatusBadRequest, "Invalid file type. Only images (jpeg, png, gif, webp) are allowed")
+		return
+	}
+
+	// Read file content
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		log.Printf("Error reading file: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to read file")
+		return
+	}
+
+	// Get the group to update
+	group, err := h.db.GetGroup(groupID)
+	if err != nil {
+		log.Printf("Error getting group %d: %v", groupID, err)
+		writeJSONError(w, http.StatusNotFound, "Group not found")
+		return
+	}
+
+	// Update the group with the original artwork
+	group.OriginalArtwork = fileBytes
+	group.UpdatedAt = time.Now()
+
+	if err := h.db.UpdateGroup(*group); err != nil {
+		log.Printf("Error updating group %d with original artwork: %v", groupID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to save original artwork")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Original artwork uploaded successfully",
+	})
+}
+
+// GetOriginalArtworkHandler handles GET /api/groups/{id}/original-artwork
+func (h *Handler) GetOriginalArtworkHandler(w http.ResponseWriter, r *http.Request, groupIDStr string) {
+	groupID, err := strconv.Atoi(groupIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid group ID")
+		return
+	}
+
+	group, err := h.db.GetGroup(groupID)
+	if err != nil {
+		log.Printf("Error getting group %d: %v", groupID, err)
+		writeJSONError(w, http.StatusNotFound, "Group not found")
+		return
+	}
+
+	if group.OriginalArtwork == nil || len(group.OriginalArtwork) == 0 {
+		writeJSONError(w, http.StatusNotFound, "No original artwork found for this group")
+		return
+	}
+
+	// Detect content type from the first few bytes
+	contentType := http.DetectContentType(group.OriginalArtwork)
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Length", strconv.Itoa(len(group.OriginalArtwork)))
+	w.WriteHeader(http.StatusOK)
+	w.Write(group.OriginalArtwork)
+}
+
+// SetFeaturedArtworkHandler handles POST /api/artworks/{id}/featured
+func (h *Handler) SetFeaturedArtworkHandler(w http.ResponseWriter, r *http.Request, artworkIDStr string) {
+	if !isEditingEnabled() {
+		writeJSONError(w, http.StatusForbidden, "Artwork editing is currently disabled")
+		return
+	}
+
+	artworkID, err := strconv.Atoi(artworkIDStr)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "Invalid artwork ID")
+		return
+	}
+
+	if err := h.db.SetFeaturedArtwork(artworkID); err != nil {
+		log.Printf("Error setting featured artwork %d: %v", artworkID, err)
+		writeJSONError(w, http.StatusInternalServerError, "Failed to set featured artwork")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Artwork set as featured",
+	})
+}

@@ -32,6 +32,16 @@ const WorkshopApp = () => {
       });
       dispatch({ type: "SET_ARTWORKS", payload: artworkMap });
 
+      // Check if original artwork exists
+      try {
+        const response = await fetch(api.getOriginalArtworkUrl(groupId));
+        if (response.ok) {
+          dispatch({ type: "SET_ORIGINAL_ARTWORK_UPLOADED", payload: Date.now() });
+        }
+      } catch (error) {
+        // No artwork exists, that's fine
+      }
+
       showToast("Group loaded for editing", "success");
     } catch (error) {
       console.error("Failed to load group:", error);
@@ -68,6 +78,11 @@ const WorkshopApp = () => {
       } else if (parsed) {
         // Initialize from existing group
         dispatch({ type: "SET_CURRENT_GROUP", payload: parsed });
+
+        // Check if original artwork exists from server-side flag
+        if (window.hasOriginalArtwork) {
+          dispatch({ type: "SET_ORIGINAL_ARTWORK_UPLOADED", payload: Date.now() });
+        }
       }
       // If neither editId nor group, keep default form data
       const raw = window.existingArtworks;
@@ -140,7 +155,21 @@ const WorkshopApp = () => {
       const group = await (groupId ? api.updateGroup(groupId, payload) : api.createGroup(payload));
       dispatch({ type: "SET_CURRENT_GROUP", payload: group });
       window.currentGroup = group;
-      showToast("Group saved", "success");
+
+      // If there's a selected file, upload it
+      if (state.selectedFile) {
+        try {
+          await api.uploadOriginalArtwork(group.id, state.selectedFile);
+          dispatch({ type: "SET_ORIGINAL_ARTWORK_UPLOADED", payload: Date.now() });
+          dispatch({ type: "SET_SELECTED_FILE", payload: null });
+          showToast("Group and original artwork saved successfully", "success");
+        } catch (uploadError) {
+          console.error("Upload error:", uploadError);
+          showToast("Group saved, but artwork upload failed: " + uploadError.message, "error");
+        }
+      } else {
+        showToast("Group saved", "success");
+      }
     } catch (error) {
       console.error("Save group error:", error);
       showToast(`Failed to save group: ${error.message}`, "error");
@@ -293,6 +322,33 @@ const WorkshopApp = () => {
     }
   };
 
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    dispatch({ type: "SET_SELECTED_FILE", payload: file });
+  };
+
+  const toggleFeatured = async (artworkId) => {
+    try {
+      await api.setFeaturedArtwork(artworkId);
+
+      // Update local state: set this artwork as featured and unset others
+      const updatedArtworks = new Map(state.artworks);
+      updatedArtworks.forEach((artwork, id) => {
+        if (Number(id) === Number(artworkId)) {
+          updatedArtworks.set(id, { ...artwork, featured: true });
+        } else {
+          updatedArtworks.set(id, { ...artwork, featured: false });
+        }
+      });
+      dispatch({ type: "SET_ARTWORKS", payload: updatedArtworks });
+
+      showToast("Artwork set as featured", "success");
+    } catch (error) {
+      console.error("Toggle featured error:", error);
+      showToast("Failed to set featured artwork: " + error.message, "error");
+    }
+  };
+
   // Event handlers
   const handleAddModel = () => {
     loadModels();
@@ -392,6 +448,41 @@ const WorkshopApp = () => {
               />
             </div>
 
+            <div class="space-y-2">
+              <label for="original-artwork-input" class="block text-sm font-medium">Original Artwork</label>
+              <div class="space-y-2">
+                ${state.currentGroup?.id &&
+                state.originalArtworkUploaded > 0 &&
+                !state.selectedFile &&
+                html`
+                  <img
+                    key=${state.originalArtworkUploaded}
+                    src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}"
+                    alt="Original artwork"
+                    class="max-w-full h-auto border border-border"
+                  />
+                `}
+                ${state.selectedFile &&
+                html`
+                  <div class="text-sm text-fg/70">
+                    Selected: ${state.selectedFile.name} (${Math.round(state.selectedFile.size / 1024)}KB)
+                  </div>
+                `}
+                <input
+                  type="file"
+                  id="original-artwork-input"
+                  accept="image/*"
+                  class="w-full p-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  onChange=${handleFileSelect}
+                />
+                <p class="text-xs text-fg/70">
+                  ${isEditing
+                    ? "Upload an image file (JPEG, PNG, GIF, WebP). Click 'Update Group' to save."
+                    : "Upload an image file (JPEG, PNG, GIF, WebP). Click 'Save Group' to save."}
+                </p>
+              </div>
+            </div>
+
             <div class="flex items-center gap-3">
               <button
                 class="px-6 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
@@ -423,6 +514,7 @@ const WorkshopApp = () => {
                     onRegenerate=${generateArtwork}
                     onConfigure=${handleConfigure}
                     onRemove=${removeArtwork}
+                    onToggleFeatured=${toggleFeatured}
                     isGenerating=${state.generatingArtworks.has(Number(id))}
                   />
                 `

@@ -332,6 +332,24 @@ func main() {
 	}))
 	mux.HandleFunc("/api/groups/", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/groups/")
+
+		// Handle original-artwork endpoint
+		if strings.Contains(path, "/original-artwork") {
+			parts := strings.Split(path, "/")
+			if len(parts) >= 2 {
+				idStr := parts[0]
+				switch r.Method {
+				case http.MethodPost:
+					apiHandler.UploadOriginalArtworkHandler(w, r, idStr)
+				case http.MethodGet:
+					apiHandler.GetOriginalArtworkHandler(w, r, idStr)
+				default:
+					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				}
+				return
+			}
+		}
+
 		idStr := strings.TrimSuffix(path, "/")
 
 		switch r.Method {
@@ -355,9 +373,24 @@ func main() {
 		}
 	}))
 	mux.HandleFunc("/api/artworks/", rateLimiter.Middleware(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/artworks/")
+
+		// Handle featured endpoint
+		if strings.Contains(path, "/featured") {
+			parts := strings.Split(path, "/")
+			if len(parts) >= 2 {
+				idStr := parts[0]
+				if r.Method == http.MethodPost {
+					apiHandler.SetFeaturedArtworkHandler(w, r, idStr)
+				} else {
+					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				}
+				return
+			}
+		}
+
 		if r.Method == http.MethodPatch {
 			// Extract ID from path
-			path := strings.TrimPrefix(r.URL.Path, "/api/artworks/")
 			idStr := strings.TrimSuffix(path, "/")
 			apiHandler.UpdateArtworkHandler(w, r, idStr)
 		} else {

@@ -86,6 +86,22 @@ const generateArtwork = (artworkId) =>
     body: JSON.stringify({ artwork_id: Number(artworkId) }),
   });
 
+const uploadOriginalArtwork = (groupId, file) => {
+  const formData = new FormData();
+  formData.append("artwork", file);
+  return request(`/api/groups/${groupId}/original-artwork`, {
+    method: "POST",
+    body: formData,
+  });
+};
+
+const getOriginalArtworkUrl = (groupId) => `/api/groups/${groupId}/original-artwork`;
+
+const setFeaturedArtwork = (artworkId) =>
+  request(`/api/artworks/${artworkId}/featured`, {
+    method: "POST",
+  });
+
 // Default aggregated API object for convenient imports
 const api = {
   getModels,
@@ -97,6 +113,9 @@ const api = {
   updateArtwork,
   deleteArtwork,
   generateArtwork,
+  uploadOriginalArtwork,
+  getOriginalArtworkUrl,
+  setFeaturedArtwork,
 };
 
 export default api;

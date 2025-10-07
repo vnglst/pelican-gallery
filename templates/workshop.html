@@ -34,6 +34,7 @@
     <script>
       window.currentGroup = {{if .EditGroup}}{{.EditGroup | json}}{{else}}null{{end}};
       window.existingArtworks = {{if .EditArtworks}}{{.EditArtworks | json}}{{else}}[]{{end}};
+      window.hasOriginalArtwork = {{.HasOriginalArtwork}};
     </script>
     <script type="module" src="/static/js/workshop.js"></script>
   </body>

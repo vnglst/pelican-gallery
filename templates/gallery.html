@@ -42,24 +42,47 @@
       {{end}}
 
       <main class="flex-1 w-full max-w-6xl mx-auto px-6 pb-12">
-        {{if .Artworks}}
+        {{if .Groups}}
         <div class="py-16">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-16">
-            {{range .Artworks}}
-            <div class="group relative">
-              <a href="/group/{{.GroupID}}" class="block aspect-square overflow-hidden flex items-center justify-center"
-                data-artwork-id="{{.ID}}" data-model="{{.Model}}">
-                {{template "frame" .SVGContent}}
-                <!-- Hover overlay at bottom -->
-                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4">
-                  <div class="text-center text-white">
-                    <h3 class="text-lg font-bold">{{.Title}}</h3>
-                    {{if .ArtistName}}<p class="text-sm">by {{.ArtistName}}</p>{{end}}
-                    <p class="text-sm">{{modelName .Model}}</p>
+            {{range .Groups}}
+              {{if .HasOriginalArtwork}}
+              <!-- Original Artwork -->
+              <div class="group relative">
+                <a href="/group/{{.ID}}" class="block aspect-square overflow-hidden flex items-center justify-center bg-gray-50">
+                  <img
+                    src="/api/groups/{{.ID}}/original-artwork"
+                    alt="Original {{.Title}}"
+                    class="w-full h-full object-contain"
+                  />
+                  <!-- Hover overlay at bottom -->
+                  <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4">
+                    <div class="text-center text-white">
+                      <h3 class="text-lg font-bold">{{.Title}}</h3>
+                      {{if .ArtistName}}<p class="text-sm">by {{.ArtistName}}</p>{{end}}
+                      <p class="text-sm">Original Artwork</p>
+                    </div>
                   </div>
-                </div>
-              </a>
-            </div>
+                </a>
+              </div>
+              {{end}}
+              {{range .Artworks}}
+              <!-- GPT-5 Artwork -->
+              <div class="group relative">
+                <a href="/group/{{.GroupID}}" class="block aspect-square overflow-hidden flex items-center justify-center"
+                  data-artwork-id="{{.ID}}" data-model="{{.Model}}">
+                  {{template "frame" .SVGContent}}
+                  <!-- Hover overlay at bottom -->
+                  <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4">
+                    <div class="text-center text-white">
+                      <h3 class="text-lg font-bold">{{.Title}}</h3>
+                      {{if .ArtistName}}<p class="text-sm">by {{.ArtistName}}</p>{{end}}
+                      <p class="text-sm">{{modelName .Model}}</p>
+                    </div>
+                  </div>
+                </a>
+              </div>
+              {{end}}
             {{end}}
           </div>
         </div>

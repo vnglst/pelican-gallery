@@ -103,25 +103,7 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only include artworks from these three models (case-insensitive substring match)
-	allowedModelSubs := []string{
-		"anthropic/claude-sonnet-4",
-		"google/gemini-2.5-pro",
-		"openai/gpt-5",
-	}
-	allowedModelsContains := func(model string) bool {
-		if model == "" {
-			return false
-		}
-		low := strings.ToLower(model)
-		for _, sub := range allowedModelSubs {
-			if low == strings.ToLower(sub) {
-				return true
-			}
-		}
-		return false
-	}
-
+	// Only show GPT-5 artwork alongside original
 	type GalleryArtwork struct {
 		models.Artwork
 		Title      string        `json:"title"`
@@ -133,7 +115,8 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 
 	type GalleryGroup struct {
 		models.ArtworkGroup
-		Artworks []GalleryArtwork `json:"artworks"`
+		Artworks           []GalleryArtwork `json:"artworks"`
+		HasOriginalArtwork bool             `json:"has_original_artwork"`
 	}
 
 	var galleryGroups []GalleryGroup
@@ -141,24 +124,46 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 	for _, group := range groups {
 		artworks := artworkMap[group.ID]
 		var filteredArtworks []GalleryArtwork
-		for _, artwork := range artworks {
-			if allowedModelsContains(artwork.Model) {
-				ga := GalleryArtwork{
-					Artwork:    artwork,
-					Title:      group.Title,
-					Category:   group.Category,
-					Prompt:     group.Prompt,
-					ArtistName: group.ArtistName,
-					SVGContent: template.HTML(artwork.SVG),
-				}
-				filteredArtworks = append(filteredArtworks, ga)
-				// append to flat list as well
-				flatArtworks = append(flatArtworks, ga)
+
+		// Find featured artwork (or fallback to GPT-5)
+		var featuredArtwork *models.Artwork
+		var gpt5Artwork *models.Artwork
+
+		for i, artwork := range artworks {
+			if artwork.Featured {
+				featuredArtwork = &artworks[i]
+				break
+			}
+			if strings.ToLower(artwork.Model) == "openai/gpt-5" {
+				gpt5Artwork = &artworks[i]
 			}
 		}
+
+		// Use featured if available, otherwise fallback to GPT-5
+		selectedArtwork := featuredArtwork
+		if selectedArtwork == nil {
+			selectedArtwork = gpt5Artwork
+		}
+
+		if selectedArtwork != nil {
+			ga := GalleryArtwork{
+				Artwork:    *selectedArtwork,
+				Title:      group.Title,
+				Category:   group.Category,
+				Prompt:     group.Prompt,
+				ArtistName: group.ArtistName,
+				SVGContent: template.HTML(selectedArtwork.SVG),
+			}
+			filteredArtworks = append(filteredArtworks, ga)
+			flatArtworks = append(flatArtworks, ga)
+		}
+
+		hasOriginalArtwork := group.OriginalArtwork != nil && len(group.OriginalArtwork) > 0
+
 		galleryGroups = append(galleryGroups, GalleryGroup{
-			ArtworkGroup: group,
-			Artworks:     filteredArtworks,
+			ArtworkGroup:       group,
+			Artworks:           filteredArtworks,
+			HasOriginalArtwork: hasOriginalArtwork,
 		})
 	}
 
@@ -322,16 +327,23 @@ func (h *PageHandler) WorkshopHandler(w http.ResponseWriter, r *http.Request) {
 	templateData := h.templateData
 
 	// Create template data with edit information
+	hasOriginalArtwork := false
+	if editGroup != nil && editGroup.OriginalArtwork != nil && len(editGroup.OriginalArtwork) > 0 {
+		hasOriginalArtwork = true
+	}
+
 	currentTemplateData := struct {
-		Models       []models.ModelInfo   `json:"models"`
-		EditGroup    *models.ArtworkGroup `json:"edit_group,omitempty"`
-		EditArtworks []models.Artwork     `json:"edit_artworks,omitempty"`
-		CSSHash      string               `json:"css_hash"`
+		Models             []models.ModelInfo   `json:"models"`
+		EditGroup          *models.ArtworkGroup `json:"edit_group,omitempty"`
+		EditArtworks       []models.Artwork     `json:"edit_artworks,omitempty"`
+		HasOriginalArtwork bool                 `json:"has_original_artwork"`
+		CSSHash            string               `json:"css_hash"`
 	}{
-		Models:       templateData.Models,
-		EditGroup:    editGroup,
-		EditArtworks: editArtworks,
-		CSSHash:      h.getCSSHash(),
+		Models:             templateData.Models,
+		EditGroup:          editGroup,
+		EditArtworks:       editArtworks,
+		HasOriginalArtwork: hasOriginalArtwork,
+		CSSHash:            h.getCSSHash(),
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -430,20 +442,24 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		artList = append(artList, ArtworkWithHTML{Artwork: a, SVGContent: template.HTML(a.SVG)})
 	}
 
+	hasOriginalArtwork := group.OriginalArtwork != nil && len(group.OriginalArtwork) > 0
+
 	data := struct {
-		Title          string
-		Group          *models.ArtworkGroup
-		Artworks       []ArtworkWithHTML
-		EditingEnabled bool
-		ModelFilters   []string
-		CSSHash        string
+		Title              string
+		Group              *models.ArtworkGroup
+		Artworks           []ArtworkWithHTML
+		EditingEnabled     bool
+		ModelFilters       []string
+		HasOriginalArtwork bool
+		CSSHash            string
 	}{
-		Title:          "Artwork Group - Pelican Art Gallery",
-		Group:          group,
-		Artworks:       artList,
-		EditingEnabled: isEditingEnabled(),
-		ModelFilters:   modelFilters,
-		CSSHash:        h.getCSSHash(),
+		Title:              "Artwork Group - Pelican Art Gallery",
+		Group:              group,
+		Artworks:           artList,
+		EditingEnabled:     isEditingEnabled(),
+		ModelFilters:       modelFilters,
+		HasOriginalArtwork: hasOriginalArtwork,
+		CSSHash:            h.getCSSHash(),
 	}
 
 	tmpl, err := h.getTemplate()

@@ -41,6 +41,8 @@ export function createInitialState(windowObj = window) {
       prompt: "Sunflowers by Vincent van Gogh.",
       category: "Art",
     },
+    originalArtworkUploaded: 0,
+    selectedFile: null,
   };
 }
 
@@ -99,6 +101,10 @@ export const reducer = (state, action) => {
     }
     case "SET_FORM_DATA":
       return { ...state, formData: action.payload };
+    case "SET_ORIGINAL_ARTWORK_UPLOADED":
+      return { ...state, originalArtworkUploaded: action.payload };
+    case "SET_SELECTED_FILE":
+      return { ...state, selectedFile: action.payload };
     default:
       return state;
   }

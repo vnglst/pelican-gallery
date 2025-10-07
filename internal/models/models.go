@@ -18,14 +18,15 @@ type SystemPrompt struct {
 
 // ArtworkGroup represents a group of artworks with the same prompt
 type ArtworkGroup struct {
-	ID          int       `db:"id" json:"id"`
-	Title       string    `db:"title" json:"title"`
-	Prompt      string    `db:"prompt" json:"prompt"`
-	Category    string    `db:"category" json:"category"`
-	OriginalURL string    `db:"original_url" json:"original_url"`
-	ArtistName  string    `db:"artist_name" json:"artist_name"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	ID              int       `db:"id" json:"id"`
+	Title           string    `db:"title" json:"title"`
+	Prompt          string    `db:"prompt" json:"prompt"`
+	Category        string    `db:"category" json:"category"`
+	OriginalURL     string    `db:"original_url" json:"original_url"`
+	ArtistName      string    `db:"artist_name" json:"artist_name"`
+	OriginalArtwork []byte    `db:"original_artwork" json:"-"`
+	CreatedAt       time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Artwork represents an individual artwork within a group
@@ -36,6 +37,7 @@ type Artwork struct {
 	Temperature float64   `db:"temperature" json:"temperature"`
 	MaxTokens   int       `db:"max_tokens" json:"max_tokens"`
 	SVG         string    `db:"svg" json:"svg"`
+	Featured    bool      `db:"featured" json:"featured"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 }
