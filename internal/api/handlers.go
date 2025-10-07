@@ -675,7 +675,7 @@ func (h *Handler) GetOriginalArtworkHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if group.OriginalArtwork == nil || len(group.OriginalArtwork) == 0 {
+	if len(group.OriginalArtwork) == 0 {
 		writeJSONError(w, http.StatusNotFound, "No original artwork found for this group")
 		return
 	}

@@ -158,7 +158,7 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 			flatArtworks = append(flatArtworks, ga)
 		}
 
-		hasOriginalArtwork := group.OriginalArtwork != nil && len(group.OriginalArtwork) > 0
+		hasOriginalArtwork := len(group.OriginalArtwork) > 0
 
 		galleryGroups = append(galleryGroups, GalleryGroup{
 			ArtworkGroup:       group,
@@ -442,7 +442,7 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		artList = append(artList, ArtworkWithHTML{Artwork: a, SVGContent: template.HTML(a.SVG)})
 	}
 
-	hasOriginalArtwork := group.OriginalArtwork != nil && len(group.OriginalArtwork) > 0
+	hasOriginalArtwork := len(group.OriginalArtwork) > 0
 
 	data := struct {
 		Title              string
