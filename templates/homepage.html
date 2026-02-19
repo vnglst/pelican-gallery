@@ -1,117 +1,73 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pelican Art Gallery</title>
+    <title>About - Pelican Art Gallery</title>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <link rel="stylesheet" href="/static/css/output.css?v={{.CSSHash}}" />
     {{template "plausible" .}}
   </head>
   <body class="bg-bg text-fg font-sans antialiased min-h-screen">
-    <div class="min-h-[110vh] flex flex-col">
-      <header class="w-full max-w-6xl mx-auto px-12 pt-16 pb-16">
-        <h1 class="text-center">
-          <a href="/" class="text-3xl md:text-4xl font-light inline-block">Pelican Art Gallery</a>
-        </h1>
+    <div class="min-h-screen flex flex-col">
+      <header class="w-full max-w-6xl mx-auto px-12 py-16">
+        <nav class="text-center">
+          <h1>
+            <a href="/gallery/category/abstract" class="text-3xl md:text-4xl font-light">Pelican Art Gallery</a>
+          </h1>
+        </nav>
       </header>
 
-      <main class="flex-1 w-full max-w-6xl mx-auto px-6 md:px-12 pb-20">
-        <div class="flex flex-col justify-center w-full mx-auto space-y-8">
-          <!-- Hero Section with headline -->
-          <section class="text-center space-y-6 max-w-4xl mx-auto pt-8">
-            <h2 class="text-4xl md:text-5xl font-light leading-tight">Can an LLM Draw Starry Night from Memory?</h2>
-            <p class="text-xl md:text-2xl text-fg/80 font-light">
-              Comparing how AI models recreate famous paintings using only code
-            </p>
-          </section>
-
-          {{if .FeaturedGroup}}
-          <!-- Hero Images -->
-          <section class="space-y-6" aria-labelledby="featured-artworks">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-5xl mx-auto">
-              {{range $index, $artwork := .FeaturedArtworks}}{{if lt $index 2}}
-              <a href="/group/{{$.FeaturedGroup.ID}}" class="block space-y-3 group">
-                <figure class="overflow-hidden transition-transform duration-200 group-hover:scale-[1.02]">
-                  {{if $artwork.SVG}}
-                  <div class="w-full aspect-square flex items-center justify-center p-4">
-                    {{template "frame" $artwork.SVGContent}}
-                  </div>
-                  {{else}}
-                  <div class="w-full aspect-square flex items-center justify-center text-fg/40 p-4">
-                    <div class="text-center space-y-2">
-                      <svg
-                        class="w-8 h-8 mx-auto"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        aria-hidden="true"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21,15 16,10 5,21" />
-                      </svg>
-                      <span class="text-sm">No preview available</span>
-                    </div>
-                  </div>
-                  {{end}}
-                </figure>
-                <figcaption class="text-center text-lg font-medium text-fg/80 group-hover:text-fg transition-colors">
-                  {{if eq $index 0}}GPT-3.5 (2022){{else}}GPT-5 (2025){{end}}
-                </figcaption>
-              </a>
-              {{end}}{{end}}
-            </div>
-            <p class="text-center text-lg text-fg/70 italic mt-2">Same prompt. Three years apart.</p>
-          </section>
-          {{else}} {{end}}
-
-          <!-- Explanation -->
-          <section class="space-y-8 text-center max-w-3xl mx-auto" aria-labelledby="about-section">
-            <div class="space-y-6 text-lg md:text-xl leading-relaxed text-fg/90 font-normal">
-              <p>
-                Large language models can't generate images. They can only write text or code. So I asked them to
-                recreate famous paintings as SVG files, using nothing but their memory of what each artwork looks like.
-              </p>
-              <p>
-                No reference images. No examples. Just the model's training data and whatever it learned about art,
-                composition, and color from text descriptions and code examples.
-              </p>
-              <p>
-                I tested this across 15+ models released between 2022 and 2025, including OpenAI's GPT series,
-                Anthropic's Claude, Google's Gemini, and open source models from DeepSeek and others.
-              </p>
-            </div>
-
-            <!-- CTA Button -->
-            <nav class="mt-12">
+      {{if .Categories}}
+      <nav class="sticky top-0 z-20 w-full bg-bg border-b border-border" aria-label="Artwork categories">
+        <div class="w-full max-w-6xl mx-auto px-12 py-4">
+          <div class="overflow-x-auto scrollbar-hide">
+            <div class="flex gap-3 justify-center w-max min-w-full mx-auto">
+              {{range .Categories}}
               <a
-                href="/group/86"
-                class="inline-block text-base font-semibold tracking-wide bg-fg text-bg hover:bg-fg/90 transition-all duration-200 ease-out px-8 py-4 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-                aria-label="View Starry Night gallery with all models"
+                href="/gallery/category/{{.}}"
+                class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out hover:bg-fg hover:text-bg"
               >
-                View Starry Night →
+                {{.}}
               </a>
-            </nav>
-
-            <!-- Secondary Navigation -->
-            <nav class="mt-8">
-              <p class="text-base text-fg/70 mb-4">See other artworks:</p>
-              <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 text-base text-fg/70">
-                <a href="/group/86" class="underline hover:text-fg">Starry Night</a>
-                <span class="text-fg/40">|</span>
-                <a href="/group/81" class="underline hover:text-fg">The Scream</a>
-                <span class="text-fg/40">|</span>
-                <a href="/group/71" class="underline hover:text-fg">Mona Lisa</a>
-                <span class="text-fg/40">|</span>
-                <a href="/group/58" class="underline hover:text-fg">Night Watch</a>
-                <span class="text-fg/40">|</span>
-                <a href="/group/54" class="underline hover:text-fg">Victory Boogie Woogie</a>
-              </div>
-            </nav>
-          </section>
+              {{end}}
+              <a
+                href="/about"
+                class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out bg-fg text-bg font-bold"
+              >
+                // about
+              </a>
+            </div>
+          </div>
         </div>
+      </nav>
+      {{end}}
+
+      <main class="flex-1 w-full max-w-2xl mx-auto px-6 md:px-12 py-16">
+        <article class="space-y-6 text-sm leading-relaxed">
+          <p>
+            Large language models can't generate images. They can only write text or code. So I asked them to recreate
+            famous paintings as SVG files, using nothing but their memory of what each artwork looks like.
+          </p>
+          <p>
+            No reference images. No examples. Just the model's training data and whatever it learned about art,
+            composition, and color from text descriptions and code examples.
+          </p>
+          <p>
+            I tested this across 15+ models released between 2022 and 2025, including OpenAI's GPT series, Anthropic's
+            Claude, Google's Gemini, and open source models from DeepSeek and others.
+          </p>
+          <p>
+            This project was inspired by
+            <a
+              href="https://simonwillison.net/2025/Jun/6/six-months-in-llms/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline hover:text-fg/60"
+              >Simon Willison's pelican benchmark</a
+            >.
+          </p>
+        </article>
       </main>
 
       {{template "footer" .}}

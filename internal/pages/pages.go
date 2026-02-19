@@ -208,71 +208,20 @@ func isEditingEnabled() bool {
 	return config.IsEditingEnabled()
 }
 
-// HomepageHandler handles requests to the homepage
-func (h *PageHandler) HomepageHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	// Get the Starry Night group (group_id = 86) with specific artworks
-	featuredGroup, err := h.db.GetGroup(86)
-	var featuredArtworks []models.Artwork
-
+// AboutHandler handles requests to the about page
+func (h *PageHandler) AboutHandler(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.db.GetDistinctCategories()
 	if err != nil {
-		log.Printf("Error fetching Starry Night group: %v", err)
-		// If group not found, just continue without featured content
-	} else {
-		// Get all artworks for the Starry Night group
-		allArtworks, err := h.db.ListArtworksByGroup(86)
-		if err != nil {
-			log.Printf("Error fetching artworks for Starry Night: %v", err)
-		} else {
-			// Find the specific artworks we want to feature
-			var gpt35Artwork, gpt5Artwork *models.Artwork
-			for i, artwork := range allArtworks {
-				if artwork.Model == "openai/gpt-3.5-turbo" {
-					gpt35Artwork = &allArtworks[i]
-				}
-				if artwork.Model == "openai/gpt-5" {
-					gpt5Artwork = &allArtworks[i]
-				}
-			}
-
-			// Add them in order: GPT-3.5 first, then GPT-5
-			if gpt35Artwork != nil {
-				featuredArtworks = append(featuredArtworks, *gpt35Artwork)
-			}
-			if gpt5Artwork != nil {
-				featuredArtworks = append(featuredArtworks, *gpt5Artwork)
-			}
-		}
-	}
-
-	type HomepageArtwork struct {
-		models.Artwork
-		SVGContent template.HTML `json:"svg_content"`
-	}
-
-	var homepageArtworks []HomepageArtwork
-	for _, artwork := range featuredArtworks {
-		homepageArtworks = append(homepageArtworks, HomepageArtwork{
-			Artwork:    artwork,
-			SVGContent: template.HTML(artwork.SVG),
-		})
+		log.Printf("Error fetching categories for about page: %v", err)
 	}
 
 	w.Header().Set("Content-Type", "text/html")
 	homepageData := struct {
-		EditingEnabled   bool                 `json:"editing_enabled"`
-		FeaturedGroup    *models.ArtworkGroup `json:"featured_group,omitempty"`
-		FeaturedArtworks []HomepageArtwork    `json:"featured_artworks,omitempty"`
-		CSSHash          string               `json:"css_hash"`
+		Categories []string `json:"categories"`
+		CSSHash    string   `json:"css_hash"`
 	}{
-		EditingEnabled:   config.IsEditingEnabled(),
-		FeaturedGroup:    featuredGroup,
-		FeaturedArtworks: homepageArtworks,
-		CSSHash:          h.getCSSHash(),
+		Categories: categories,
+		CSSHash:    h.getCSSHash(),
 	}
 
 	tmpl, err := h.getTemplate()

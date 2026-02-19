@@ -271,7 +271,14 @@ func main() {
 	staticHandler := http.StripPrefix("/static/", http.FileServer(getStaticFS()))
 	mux.Handle("/static/", staticHandler)
 
-	mux.HandleFunc("/", pageHandler.HomepageHandler)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Redirect(w, r, "/gallery/category/abstract", http.StatusFound)
+	})
+	mux.HandleFunc("/about", pageHandler.AboutHandler)
 	mux.HandleFunc("/workshop", pageHandler.WorkshopHandler)
 	mux.HandleFunc("/gallery", func(w http.ResponseWriter, r *http.Request) {
 		// Redirect /gallery to /gallery/ for consistency
