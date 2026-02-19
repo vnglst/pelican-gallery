@@ -30,14 +30,16 @@
               {{range .Categories}}
               <a
                 href="/gallery/category/{{.}}"
-                class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out {{if eq $.Category .}}bg-fg text-bg font-bold{{else}}hover:bg-fg hover:text-bg{{end}}"
+                data-label="{{.}}"
+                class="nav-link flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out {{if eq $.Category .}}bg-fg text-bg font-bold{{else}}hover:bg-fg hover:text-bg{{end}}"
               >
                 {{.}}
               </a>
               {{end}}
               <a
                 href="/about"
-                class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out hover:bg-fg hover:text-bg"
+                data-label="// about"
+                class="nav-link flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out hover:bg-fg hover:text-bg"
               >
                 // about
               </a>

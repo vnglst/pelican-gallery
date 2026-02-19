@@ -44,3 +44,14 @@ html {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Reserve bold width so switching active state doesn't cause layout shift */
+.nav-link::after {
+  content: attr(data-label);
+  font-weight: bold;
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}

@@ -26,14 +26,16 @@
               {{range .Categories}}
               <a
                 href="/gallery/category/{{.}}"
-                class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out hover:bg-fg hover:text-bg"
+                data-label="{{.}}"
+                class="nav-link flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out hover:bg-fg hover:text-bg"
               >
                 {{.}}
               </a>
               {{end}}
               <a
                 href="/about"
-                class="flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out bg-fg text-bg font-bold"
+                data-label="// about"
+                class="nav-link flex-shrink-0 px-4 py-2 text-sm tracking-wide lowercase transition-colors duration-200 ease-out bg-fg text-bg font-bold"
               >
                 // about
               </a>
