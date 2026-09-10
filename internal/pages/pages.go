@@ -67,7 +67,7 @@ func modelProvider(model string) string {
 	return ""
 }
 
-func modelReleaseDate(model string) (time.Time, bool) {
+func modelReleaseDate(model string, storedOpenRouterCreated int64) (time.Time, bool) {
 	model = strings.ToLower(model)
 	if releasedAt, ok := modelReleaseDates[model]; ok {
 		return releasedAt, true
@@ -76,6 +76,9 @@ func modelReleaseDate(model string) (time.Time, bool) {
 	lookupID := strings.TrimSuffix(model, ":free")
 	if releasedAt, ok := modelReleaseDates[lookupID]; ok {
 		return releasedAt, true
+	}
+	if storedOpenRouterCreated > 0 {
+		return time.Unix(storedOpenRouterCreated, 0).UTC(), true
 	}
 	if info, ok := config.GetModelInfo(lookupID); ok && info.Created > 0 {
 		return time.Unix(info.Created, 0).UTC(), true
@@ -466,7 +469,7 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		if modelProvider(artwork.Model) != provider {
 			continue
 		}
-		releasedAt, hasReleaseDate := modelReleaseDate(artwork.Model)
+		releasedAt, hasReleaseDate := modelReleaseDate(artwork.Model, artwork.ModelCreatedAt)
 		artList = append(artList, ArtworkWithHTML{
 			Artwork:        artwork,
 			SVGContent:     template.HTML(artwork.SVG),

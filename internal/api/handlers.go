@@ -493,6 +493,9 @@ func (h *Handler) CreateArtworkHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
+	if modelInfo, ok := config.GetModelInfo(strings.TrimSuffix(strings.ToLower(req.Model), ":free")); ok {
+		artwork.ModelCreatedAt = modelInfo.Created
+	}
 
 	id, err := h.db.CreateArtwork(artwork)
 	if err != nil {

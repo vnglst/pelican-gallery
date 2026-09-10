@@ -31,15 +31,16 @@ type ArtworkGroup struct {
 
 // Artwork represents an individual artwork within a group
 type Artwork struct {
-	ID          int       `db:"id" json:"id"`
-	GroupID     int       `db:"group_id" json:"group_id"`
-	Model       string    `db:"model" json:"model"`
-	Temperature float64   `db:"temperature" json:"temperature"`
-	MaxTokens   int       `db:"max_tokens" json:"max_tokens"`
-	SVG         string    `db:"svg" json:"svg"`
-	Featured    bool      `db:"featured" json:"featured"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	ID             int       `db:"id" json:"id"`
+	GroupID        int       `db:"group_id" json:"group_id"`
+	Model          string    `db:"model" json:"model"`
+	ModelCreatedAt int64     `db:"model_created_at" json:"model_created_at"`
+	Temperature    float64   `db:"temperature" json:"temperature"`
+	MaxTokens      int       `db:"max_tokens" json:"max_tokens"`
+	SVG            string    `db:"svg" json:"svg"`
+	Featured       bool      `db:"featured" json:"featured"`
+	CreatedAt      time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Params represents the parameters for an artwork

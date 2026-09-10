@@ -59,6 +59,7 @@ func (db *DB) CreateTables() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		group_id INTEGER NOT NULL,
 		model TEXT NOT NULL,
+		model_created_at INTEGER NOT NULL DEFAULT 0,
 		temperature REAL NOT NULL DEFAULT 0.0,
 		max_tokens INTEGER NOT NULL DEFAULT 0,
 		svg TEXT DEFAULT '',
@@ -78,6 +79,38 @@ func (db *DB) CreateTables() error {
 		return fmt.Errorf("failed to create tables: %w", err)
 	}
 
+	if err := db.ensureArtworkModelCreatedAtColumn(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (db *DB) ensureArtworkModelCreatedAtColumn() error {
+	rows, err := db.conn.Query("PRAGMA table_info(artworks)")
+	if err != nil {
+		return fmt.Errorf("failed to inspect artworks schema: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, columnType string
+		var defaultValue interface{}
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			return fmt.Errorf("failed to inspect artworks column: %w", err)
+		}
+		if name == "model_created_at" {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to inspect artworks schema: %w", err)
+	}
+
+	if _, err := db.conn.Exec("ALTER TABLE artworks ADD COLUMN model_created_at INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return fmt.Errorf("failed to add artworks.model_created_at: %w", err)
+	}
 	return nil
 }
 
@@ -201,11 +234,11 @@ func (db *DB) ListGroups() ([]models.ArtworkGroup, error) {
 // CreateArtwork creates a new artwork
 func (db *DB) CreateArtwork(artwork models.Artwork) (int, error) {
 	query := `
-	INSERT INTO artworks (group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO artworks (group_id, model, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.Featured, artwork.CreatedAt, artwork.UpdatedAt)
+	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.ModelCreatedAt, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.Featured, artwork.CreatedAt, artwork.UpdatedAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create artwork: %w", err)
 	}
@@ -221,7 +254,7 @@ func (db *DB) CreateArtwork(artwork models.Artwork) (int, error) {
 // GetArtwork retrieves an artwork by ID
 func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE id = ?
 	`
@@ -231,6 +264,7 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 		&artwork.ID,
 		&artwork.GroupID,
 		&artwork.Model,
+		&artwork.ModelCreatedAt,
 		&artwork.Temperature,
 		&artwork.MaxTokens,
 		&artwork.SVG,
@@ -252,7 +286,7 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 // ListArtworksByGroup retrieves all artworks for a group
 func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE group_id = ?
 	ORDER BY model ASC
@@ -271,6 +305,7 @@ func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 			&artwork.ID,
 			&artwork.GroupID,
 			&artwork.Model,
+			&artwork.ModelCreatedAt,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
@@ -487,7 +522,7 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 	}
 
 	artworkQuery := fmt.Sprintf(`
-	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE group_id IN (%s)
 	ORDER BY group_id, model ASC
@@ -511,6 +546,7 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 			&artwork.ID,
 			&artwork.GroupID,
 			&artwork.Model,
+			&artwork.ModelCreatedAt,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
@@ -601,7 +637,7 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 
 	// Get artworks for this group, filtered by the two models
 	artworkQuery := `
-		SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+		SELECT id, group_id, model, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
 		FROM artworks
 		WHERE group_id = ? AND (model LIKE ? OR model LIKE ?)
 		ORDER BY CASE
@@ -624,6 +660,7 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 			&artwork.ID,
 			&artwork.GroupID,
 			&artwork.Model,
+			&artwork.ModelCreatedAt,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
