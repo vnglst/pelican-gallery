@@ -27,10 +27,18 @@
 
       <main class="chronology-shell flex-1">
         <nav class="provider-tabs scrollbar-hide" aria-label="Model provider">
+          {{if gt (index .ProviderCounts "openai") 0}}
           <a href="/group/{{.Group.ID}}?provider=openai" class="provider-tab" {{if eq .ActiveProvider "openai"}}aria-current="page"{{end}}>OpenAI <span>{{index .ProviderCounts "openai"}}</span></a>
+          {{end}}
+          {{if gt (index .ProviderCounts "google") 0}}
           <a href="/group/{{.Group.ID}}?provider=google" class="provider-tab" {{if eq .ActiveProvider "google"}}aria-current="page"{{end}}>Google <span>{{index .ProviderCounts "google"}}</span></a>
+          {{end}}
+          {{if gt (index .ProviderCounts "anthropic") 0}}
           <a href="/group/{{.Group.ID}}?provider=anthropic" class="provider-tab" {{if eq .ActiveProvider "anthropic"}}aria-current="page"{{end}}>Anthropic <span>{{index .ProviderCounts "anthropic"}}</span></a>
+          {{end}}
+          {{if gt (index .ProviderCounts "open-source") 0}}
           <a href="/group/{{.Group.ID}}?provider=open-source" class="provider-tab" {{if eq .ActiveProvider "open-source"}}aria-current="page"{{end}}>Open source <span>{{index .ProviderCounts "open-source"}}</span></a>
+          {{end}}
         </nav>
 
         <div class="chronology scrollbar-hide" aria-label="Model chronology">

@@ -442,17 +442,23 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	provider := strings.ToLower(r.URL.Query().Get("provider"))
-	if provider != FilterAnthropic && provider != FilterGoogle && provider != FilterOpenSource {
-		provider = FilterOpenAI
-	}
-
 	providerCounts := map[string]int{
 		FilterOpenAI: 0, FilterAnthropic: 0, FilterGoogle: 0, FilterOpenSource: 0,
 	}
 	for _, artwork := range artworks {
 		if category := modelProvider(artwork.Model); category != "" {
 			providerCounts[category]++
+		}
+	}
+
+	provider := strings.ToLower(r.URL.Query().Get("provider"))
+	if providerCounts[provider] == 0 {
+		provider = FilterOpenAI
+		for _, candidate := range []string{FilterOpenAI, FilterGoogle, FilterAnthropic, FilterOpenSource} {
+			if providerCounts[candidate] > 0 {
+				provider = candidate
+				break
+			}
 		}
 	}
 
