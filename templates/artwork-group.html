@@ -38,6 +38,7 @@
           <figure id="artwork-{{.ID}}" class="chronology-card group" data-model="{{.Model}}">
             <figcaption class="chronology-card-header">
               <strong>{{.DisplayName}}</strong>
+              {{if .HasReleaseDate}}<time datetime="{{.ReleasedAt.Format "2006-01-02"}}">{{.ReleasedAt.Year}}</time>{{end}}
             </figcaption>
             <div class="chronology-artwork" data-artwork-media>
               {{template "frame" .SVGContent}}
