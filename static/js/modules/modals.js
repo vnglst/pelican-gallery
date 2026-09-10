@@ -71,23 +71,26 @@ export const ModelModal = ({ isOpen, onClose, onSelect, models, loading, error }
   `;
 };
 
-const DEFAULT_CONFIG = { temperature: 0.7, max_tokens: 50000 };
+const FALLBACK_MAX_OUTPUT_TOKENS = 15000;
+const DEFAULT_CONFIG = { temperature: 0.7, max_tokens: FALLBACK_MAX_OUTPUT_TOKENS };
 
-export const ConfigModal = ({ isOpen, onClose, onSave, artwork }) => {
+export const ConfigModal = ({ isOpen, onClose, onSave, artwork, model }) => {
   const [config, setConfig] = useState(DEFAULT_CONFIG);
+  const maxOutputTokens =
+    model?.max_completion_tokens || model?.context_length || FALLBACK_MAX_OUTPUT_TOKENS;
 
   useEffect(() => {
     if (artwork) {
       try {
         setConfig({
           temperature: artwork.temperature,
-          max_tokens: artwork.max_tokens,
+          max_tokens: Math.min(artwork.max_tokens, maxOutputTokens),
         });
       } catch (e) {
         console.error("Failed to read artwork params:", e);
       }
     }
-  }, [artwork]);
+  }, [artwork, maxOutputTokens]);
 
   const handleSave = () => {
     onSave(config);
@@ -95,7 +98,7 @@ export const ConfigModal = ({ isOpen, onClose, onSave, artwork }) => {
   };
 
   const resetDefaults = () => {
-    setConfig(DEFAULT_CONFIG);
+    setConfig({ ...DEFAULT_CONFIG, max_tokens: maxOutputTokens });
   };
 
   return html`
@@ -139,7 +142,7 @@ export const ConfigModal = ({ isOpen, onClose, onSave, artwork }) => {
                 id="max-tokens-input"
                 class="flex-1 h-2 bg-border appearance-none cursor-pointer accent-fg"
                 min="100"
-                max="1000000"
+                max=${maxOutputTokens}
                 step="100"
                 value=${config.max_tokens}
                 onInput=${(e) => setConfig({ ...config, max_tokens: parseInt(e.target.value) })}

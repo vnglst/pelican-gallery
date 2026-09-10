@@ -84,10 +84,12 @@ type SaveArtworkResponse struct {
 
 // ModelInfo represents information about an available model
 type ModelInfo struct {
-	ID      string  `json:"id"`
-	Name    string  `json:"name"`
-	Checked bool    `json:"checked"`
-	Cost    float64 `json:"cost"` // Cost per 1M output tokens in dollars
+	ID                  string  `json:"id"`
+	Name                string  `json:"name"`
+	Checked             bool    `json:"checked"`
+	Cost                float64 `json:"cost"` // Cost per 1M output tokens in dollars
+	ContextLength       int     `json:"context_length,omitempty"`
+	MaxCompletionTokens int     `json:"max_completion_tokens,omitempty"`
 }
 
 // PromptExample represents an example prompt for users
@@ -108,7 +110,7 @@ type OpenRouterRequest struct {
 	Model       string     `json:"model"`
 	Messages    []Message  `json:"messages"`
 	Temperature float64    `json:"temperature"`
-	MaxTokens   int        `json:"max_tokens"`
+	MaxTokens   *int       `json:"max_completion_tokens,omitempty"`
 	Reasoning   *Reasoning `json:"reasoning,omitempty"`
 }
 

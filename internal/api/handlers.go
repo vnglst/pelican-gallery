@@ -25,6 +25,29 @@ type Handler struct {
 	tmpl         *template.Template
 }
 
+func effectiveMaxTokens(requested int, model models.ModelInfo, messages []models.Message) int {
+	limit := model.MaxCompletionTokens
+	if model.ContextLength > 0 {
+		// A byte count is a deliberately conservative tokenizer-independent upper
+		// bound, with extra room for per-message formatting performed by providers.
+		inputUpperBound := 32
+		for _, message := range messages {
+			inputUpperBound += len(message.Role) + len(message.Content) + 16
+		}
+		contextAvailable := model.ContextLength - inputUpperBound
+		if contextAvailable < 1 {
+			return 1
+		}
+		if limit == 0 || contextAvailable < limit {
+			limit = contextAvailable
+		}
+	}
+	if limit == 0 || requested <= limit {
+		return requested
+	}
+	return limit
+}
+
 // NewHandler creates a new API handler
 func NewHandler(promptConfig *models.PromptConfig, db *database.DB, tmpl *template.Template) *Handler {
 	return &Handler{
@@ -142,11 +165,24 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 
 	log.Printf("Sending %d messages to OpenRouter", len(messages))
 
+	var effectiveTokens *int
+	if modelInfo, ok := config.GetModelInfo(model); ok {
+		value := effectiveMaxTokens(maxTokens, modelInfo, messages)
+		effectiveTokens = &value
+		if value != maxTokens {
+			log.Printf("Capping requested max_completion_tokens from %d to %d for model %s", maxTokens, value, model)
+		}
+	} else {
+		// Without reliable model limits, omit the optional bound and let the
+		// selected provider choose a valid default.
+		log.Printf("Model limits unavailable for %s; omitting max_completion_tokens", model)
+	}
+
 	openRouterReq := models.OpenRouterRequest{
 		Model:       model,
 		Messages:    messages,
 		Temperature: temperature,
-		MaxTokens:   maxTokens,
+		MaxTokens:   effectiveTokens,
 		Reasoning: &models.Reasoning{
 			Effort:  "medium",
 			Enabled: true,

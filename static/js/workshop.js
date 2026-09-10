@@ -251,7 +251,7 @@ const WorkshopApp = () => {
         group_id: groupId,
         model: model.id,
         temperature: 0.7,
-        max_tokens: 50000,
+        max_tokens: model.max_completion_tokens || model.context_length || 15000,
       };
 
       const artwork = await api.createArtwork(payload);
@@ -361,6 +361,7 @@ const WorkshopApp = () => {
   };
 
   const handleConfigure = (artwork) => {
+    if (state.models.length === 0) loadModels();
     dispatch({ type: "SET_CONFIG_ARTWORK", payload: artwork });
     dispatch({ type: "SET_MODAL", payload: { modal: "config", value: true } });
   };
@@ -552,6 +553,7 @@ const WorkshopApp = () => {
         onClose=${() => dispatch({ type: "SET_MODAL", payload: { modal: "config", value: false } })}
         onSave=${handleConfigSave}
         artwork=${state.configArtwork}
+        model=${state.models.find((model) => model.id === state.configArtwork?.model)}
       />
 
       <!-- Loading overlay -->

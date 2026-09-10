@@ -28,9 +28,14 @@ type openRouterResponse struct {
 }
 
 type openRouterModel struct {
-	ID      string                 `json:"id"`
-	Name    string                 `json:"name"`
-	Pricing map[string]interface{} `json:"pricing"`
+	ID            string                 `json:"id"`
+	Name          string                 `json:"name"`
+	Pricing       map[string]interface{} `json:"pricing"`
+	ContextLength int                    `json:"context_length"`
+	TopProvider   struct {
+		ContextLength       int `json:"context_length"`
+		MaxCompletionTokens int `json:"max_completion_tokens"`
+	} `json:"top_provider"`
 }
 
 // LoadPromptConfig loads the prompt configuration from the YAML file
@@ -131,10 +136,15 @@ func fetchOpenRouterModels() ([]models.ModelInfo, error) {
 			}
 		}
 		modelInfos = append(modelInfos, models.ModelInfo{
-			ID:   model.ID,
-			Name: model.Name,
-			Cost: cost,
+			ID:                  model.ID,
+			Name:                model.Name,
+			Cost:                cost,
+			ContextLength:       model.TopProvider.ContextLength,
+			MaxCompletionTokens: model.TopProvider.MaxCompletionTokens,
 		})
+		if modelInfos[len(modelInfos)-1].ContextLength == 0 {
+			modelInfos[len(modelInfos)-1].ContextLength = model.ContextLength
+		}
 	}
 
 	// Update cache
@@ -144,6 +154,20 @@ func fetchOpenRouterModels() ([]models.ModelInfo, error) {
 
 	log.Printf("Fetched %d models from OpenRouter", len(modelInfos))
 	return modelInfos, nil
+}
+
+// GetModelInfo returns OpenRouter's advertised limits for a model.
+func GetModelInfo(modelID string) (models.ModelInfo, bool) {
+	available, err := fetchOpenRouterModels()
+	if err != nil {
+		return models.ModelInfo{}, false
+	}
+	for _, model := range available {
+		if model.ID == modelID {
+			return model, true
+		}
+	}
+	return models.ModelInfo{}, false
 }
 
 // parseFloat parses a string to float64
