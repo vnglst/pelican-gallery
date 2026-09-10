@@ -1,22 +1,25 @@
 # syntax=docker/dockerfile:1.7
 
-FROM alpine:3.22 AS tailwind
+FROM --platform=$BUILDPLATFORM alpine:3.22 AS tailwind
 
-ARG TARGETARCH
+ARG BUILDARCH
 ARG TAILWIND_VERSION=v4.3.3
 
 RUN apk add --no-cache curl \
-    && case "$TARGETARCH" in \
+    && case "$BUILDARCH" in \
         amd64) tailwind_arch="x64" ;; \
         arm64) tailwind_arch="arm64" ;; \
-        *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+        *) echo "Unsupported build architecture: $BUILDARCH" >&2; exit 1 ;; \
     esac \
     && curl --fail --location --retry 3 \
         "https://github.com/tailwindlabs/tailwindcss/releases/download/${TAILWIND_VERSION}/tailwindcss-linux-${tailwind_arch}" \
         --output /tailwindcss \
     && chmod +x /tailwindcss
 
-FROM golang:1.24-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.24-bookworm AS build
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /src
 
@@ -34,7 +37,7 @@ COPY internal ./internal
 COPY main.go ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /server ./main.go
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /server ./main.go
 
 FROM alpine:3.22 AS runtime
 
@@ -43,6 +46,7 @@ RUN apk add --no-cache ca-certificates curl
 WORKDIR /app
 
 COPY --from=build /server ./server
+COPY --from=build /src/static/css/output.css ./static/css/output.css
 COPY config ./config
 COPY artworks.db ./artworks.db
 
