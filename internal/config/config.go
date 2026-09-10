@@ -30,6 +30,9 @@ type openRouterResponse struct {
 type openRouterModel struct {
 	ID            string                 `json:"id"`
 	Name          string                 `json:"name"`
+	Created       int64                  `json:"created"`
+	HuggingFaceID string                 `json:"hugging_face_id"`
+	Description   string                 `json:"description"`
 	Pricing       map[string]interface{} `json:"pricing"`
 	ContextLength int                    `json:"context_length"`
 	TopProvider   struct {
@@ -138,6 +141,9 @@ func fetchOpenRouterModels() ([]models.ModelInfo, error) {
 		modelInfos = append(modelInfos, models.ModelInfo{
 			ID:                  model.ID,
 			Name:                model.Name,
+			Created:             model.Created,
+			HuggingFaceID:       model.HuggingFaceID,
+			Description:         model.Description,
 			Cost:                cost,
 			ContextLength:       model.TopProvider.ContextLength,
 			MaxCompletionTokens: model.TopProvider.MaxCompletionTokens,

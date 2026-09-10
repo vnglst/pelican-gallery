@@ -24,8 +24,9 @@ function svgDimensions(svg) {
 
 async function downloadArtwork(button) {
   const result = button.closest("figure");
-  const sourceSvg = result && result.querySelector("div > div > svg");
-  const sourceImage = result && result.querySelector("img");
+  const media = result && result.querySelector("[data-artwork-media]");
+  const sourceSvg = media && media.querySelector("div > svg");
+  const sourceImage = media && media.querySelector("img");
   if (!sourceSvg && !sourceImage) return;
 
   button.disabled = true;

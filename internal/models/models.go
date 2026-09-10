@@ -86,6 +86,9 @@ type SaveArtworkResponse struct {
 type ModelInfo struct {
 	ID                  string  `json:"id"`
 	Name                string  `json:"name"`
+	Created             int64   `json:"created,omitempty"`
+	HuggingFaceID       string  `json:"hugging_face_id,omitempty"`
+	Description         string  `json:"description,omitempty"`
 	Checked             bool    `json:"checked"`
 	Cost                float64 `json:"cost"` // Cost per 1M output tokens in dollars
 	ContextLength       int     `json:"context_length,omitempty"`

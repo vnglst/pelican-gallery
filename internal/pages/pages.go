@@ -7,8 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"pelican-gallery/internal/config"
 	"pelican-gallery/internal/database"
@@ -17,11 +20,99 @@ import (
 
 // Filter constants for model providers
 const (
-	FilterOpenAI    = "openai"
-	FilterAnthropic = "anthropic"
-	FilterGoogle    = "google"
-	FilterOther     = "other"
+	FilterOpenAI     = "openai"
+	FilterAnthropic  = "anthropic"
+	FilterGoogle     = "google"
+	FilterOpenSource = "open-source"
 )
+
+var modelReleaseDates = map[string]time.Time{
+	"openai/gpt-3.5-turbo":      time.Date(2023, time.March, 1, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4":              time.Date(2023, time.March, 14, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-3.5-turbo-0613": time.Date(2023, time.June, 13, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4o":             time.Date(2024, time.May, 13, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4o-mini":        time.Date(2024, time.July, 18, 0, 0, 0, 0, time.UTC),
+	"openai/o1":                 time.Date(2024, time.December, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4.1":            time.Date(2025, time.April, 14, 0, 0, 0, 0, time.UTC),
+	"openai/o3":                 time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
+	"openai/o4-mini":            time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
+	"openai/o4-mini-high":       time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-oss-120b":       time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-oss-20b":        time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-oss-20b:free":   time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5":              time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-chat":         time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-mini":         time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-nano":         time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-codex":        time.Date(2025, time.September, 15, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5.1":            time.Date(2025, time.November, 13, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5.2":            time.Date(2025, time.December, 11, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-6-astra-pro":    time.Date(2026, time.September, 3, 0, 0, 0, 0, time.UTC),
+}
+
+var modelVersionPattern = regexp.MustCompile(`\d+`)
+var openSourceDescriptionPattern = regexp.MustCompile(`(?i)\bopen[- ](?:weight|weights|source)\b`)
+
+func modelProvider(model string) string {
+	lookupID := strings.TrimSuffix(strings.ToLower(model), ":free")
+	if info, ok := config.GetModelInfo(lookupID); ok && (info.HuggingFaceID != "" || openSourceDescriptionPattern.MatchString(info.Description)) {
+		return FilterOpenSource
+	}
+
+	prefix, _, _ := strings.Cut(strings.ToLower(model), "/")
+	switch prefix {
+	case FilterOpenAI, FilterAnthropic, FilterGoogle:
+		return prefix
+	}
+	return ""
+}
+
+func modelReleaseDate(model string) (time.Time, bool) {
+	model = strings.ToLower(model)
+	if releasedAt, ok := modelReleaseDates[model]; ok {
+		return releasedAt, true
+	}
+
+	lookupID := strings.TrimSuffix(model, ":free")
+	if releasedAt, ok := modelReleaseDates[lookupID]; ok {
+		return releasedAt, true
+	}
+	if info, ok := config.GetModelInfo(lookupID); ok && info.Created > 0 {
+		return time.Unix(info.Created, 0).UTC(), true
+	}
+	return time.Time{}, false
+}
+
+func modelVersionLess(left, right string) bool {
+	leftParts := modelVersionPattern.FindAllString(strings.ToLower(left), -1)
+	rightParts := modelVersionPattern.FindAllString(strings.ToLower(right), -1)
+	for i := 0; i < len(leftParts) && i < len(rightParts); i++ {
+		leftNumber, _ := strconv.Atoi(leftParts[i])
+		rightNumber, _ := strconv.Atoi(rightParts[i])
+		if leftNumber != rightNumber {
+			return leftNumber < rightNumber
+		}
+	}
+	if len(leftParts) != len(rightParts) {
+		return len(leftParts) < len(rightParts)
+	}
+	return strings.ToLower(left) < strings.ToLower(right)
+}
+
+func chronologyModelName(model string) string {
+	lookupID := strings.TrimSuffix(strings.ToLower(model), ":free")
+	if info, ok := config.GetModelInfo(lookupID); ok && info.Name != "" {
+		if _, name, found := strings.Cut(info.Name, ": "); found {
+			return name
+		}
+		return info.Name
+	}
+	_, name, found := strings.Cut(model, "/")
+	if found {
+		return name
+	}
+	return model
+}
 
 // TemplateParser is a function type for parsing templates
 type TemplateParser func(*template.Template) (*template.Template, error)
@@ -341,9 +432,6 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Parse model filters from query parameters (can be multiple)
-	modelFilters := r.URL.Query()["model"]
-
 	artworks, err := h.db.ListArtworksByGroup(id)
 	if err != nil {
 		log.Printf("Error fetching artworks for group %d: %v", id, err)
@@ -351,45 +439,51 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// If model filters are present, filter the artworks accordingly
-	// Supported filters: "openai", "anthropic", "google", "other"
-	var filtered []models.Artwork
-	if len(modelFilters) == 0 {
-		filtered = artworks
-	} else {
-		for _, a := range artworks {
-			show := false
-			lowModel := strings.ToLower(a.Model)
-			for _, f := range modelFilters {
-				ff := strings.ToLower(f)
-				if ff == "other" {
-					if !(strings.Contains(lowModel, "openai") || strings.Contains(lowModel, "anthropic") || strings.Contains(lowModel, "google")) {
-						show = true
-						break
-					}
-				} else {
-					if strings.Contains(lowModel, ff) {
-						show = true
-						break
-					}
-				}
-			}
-			if show {
-				filtered = append(filtered, a)
-			}
+	provider := strings.ToLower(r.URL.Query().Get("provider"))
+	if provider != FilterAnthropic && provider != FilterGoogle && provider != FilterOpenSource {
+		provider = FilterOpenAI
+	}
+
+	providerCounts := map[string]int{
+		FilterOpenAI: 0, FilterAnthropic: 0, FilterGoogle: 0, FilterOpenSource: 0,
+	}
+	for _, artwork := range artworks {
+		if category := modelProvider(artwork.Model); category != "" {
+			providerCounts[category]++
 		}
 	}
 
-	// Build template data using the filtered list
 	type ArtworkWithHTML struct {
 		models.Artwork
-		SVGContent template.HTML
+		SVGContent     template.HTML
+		DisplayName    string
+		ReleasedAt     time.Time
+		HasReleaseDate bool
 	}
 
 	var artList []ArtworkWithHTML
-	for _, a := range filtered {
-		artList = append(artList, ArtworkWithHTML{Artwork: a, SVGContent: template.HTML(a.SVG)})
+	for _, artwork := range artworks {
+		if modelProvider(artwork.Model) != provider {
+			continue
+		}
+		releasedAt, hasReleaseDate := modelReleaseDate(artwork.Model)
+		artList = append(artList, ArtworkWithHTML{
+			Artwork:        artwork,
+			SVGContent:     template.HTML(artwork.SVG),
+			DisplayName:    chronologyModelName(artwork.Model),
+			ReleasedAt:     releasedAt,
+			HasReleaseDate: hasReleaseDate,
+		})
 	}
+	sort.SliceStable(artList, func(i, j int) bool {
+		if artList[i].HasReleaseDate && artList[j].HasReleaseDate && !artList[i].ReleasedAt.Equal(artList[j].ReleasedAt) {
+			return artList[i].ReleasedAt.Before(artList[j].ReleasedAt)
+		}
+		if artList[i].Model != artList[j].Model {
+			return modelVersionLess(artList[i].Model, artList[j].Model)
+		}
+		return artList[i].ID < artList[j].ID
+	})
 
 	hasOriginalArtwork := len(group.OriginalArtwork) > 0
 
@@ -398,7 +492,8 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		Group              *models.ArtworkGroup
 		Artworks           []ArtworkWithHTML
 		EditingEnabled     bool
-		ModelFilters       []string
+		ActiveProvider     string
+		ProviderCounts     map[string]int
 		HasOriginalArtwork bool
 		CSSHash            string
 	}{
@@ -406,7 +501,8 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		Group:              group,
 		Artworks:           artList,
 		EditingEnabled:     isEditingEnabled(),
-		ModelFilters:       modelFilters,
+		ActiveProvider:     provider,
+		ProviderCounts:     providerCounts,
 		HasOriginalArtwork: hasOriginalArtwork,
 		CSSHash:            h.getCSSHash(),
 	}
