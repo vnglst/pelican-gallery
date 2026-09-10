@@ -33,6 +33,20 @@
   --translate-y-2: -0.5rem;
 }
 
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-fg: #f2f2ee;
+    --color-bg: #10100f;
+    --color-bg-secondary: #191918;
+    --color-border: #343432;
+  }
+}
+
 html {
   scroll-behavior: smooth;
 }

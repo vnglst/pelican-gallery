@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/static/css/output.css?v={{.CSSHash}}" />
   </head>
@@ -30,30 +31,30 @@
               <legend class="sr-only">Select AI models to filter by</legend>
               <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" name="model" value="openai" {{if contains .ModelFilters "openai"}}checked{{end}}
-                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
-                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
-                accent-black" />
+                class="model-filter-checkbox w-4 h-4 text-fg bg-bg border border-border focus:ring-2
+                focus:ring-fg focus:ring-offset-0 focus:outline-none checked:bg-fg checked:border-fg
+                accent-fg" />
                 <span class="text-sm font-medium">OpenAI</span>
               </label>
               <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" name="model" value="anthropic" {{if contains .ModelFilters
-                "anthropic"}}checked{{end}} class="model-filter-checkbox w-4 h-4 text-black bg-white border
-                border-border focus:ring-2 focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black
-                checked:border-black accent-black" />
+                "anthropic"}}checked{{end}} class="model-filter-checkbox w-4 h-4 text-fg bg-bg border
+                border-border focus:ring-2 focus:ring-fg focus:ring-offset-0 focus:outline-none checked:bg-fg
+                checked:border-fg accent-fg" />
                 <span class="text-sm font-medium">Anthropic</span>
               </label>
               <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" name="model" value="google" {{if contains .ModelFilters "google"}}checked{{end}}
-                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
-                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
-                accent-black" />
+                class="model-filter-checkbox w-4 h-4 text-fg bg-bg border border-border focus:ring-2
+                focus:ring-fg focus:ring-offset-0 focus:outline-none checked:bg-fg checked:border-fg
+                accent-fg" />
                 <span class="text-sm font-medium">Google</span>
               </label>
               <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" name="model" value="other" {{if contains .ModelFilters "other"}}checked{{end}}
-                class="model-filter-checkbox w-4 h-4 text-black bg-white border border-border focus:ring-2
-                focus:ring-black focus:ring-offset-0 focus:outline-none checked:bg-black checked:border-black
-                accent-black" />
+                class="model-filter-checkbox w-4 h-4 text-fg bg-bg border border-border focus:ring-2
+                focus:ring-fg focus:ring-offset-0 focus:outline-none checked:bg-fg checked:border-fg
+                accent-fg" />
                 <span class="text-sm font-medium">Other</span>
               </label>
             </fieldset>
