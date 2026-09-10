@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
+    {{template "theme-init" .}}
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/static/css/output.css?v={{.CSSHash}}" />
   </head>
@@ -162,12 +163,12 @@
               />
               <button
                 type="button"
-                class="download-png absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-sm border border-black/10 bg-white/85 text-black opacity-70 shadow-subtle backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-white hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black sm:opacity-0 sm:group-hover:opacity-100"
+                class="download-png absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-sm border border-border bg-bg/85 text-fg opacity-60 shadow-subtle backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-bg hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg sm:opacity-0 sm:group-hover:opacity-100"
                 data-title="{{.Group.Title}}-original"
                 aria-label="Download original artwork as PNG"
                 title="Download PNG"
               >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                   <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
                   <path d="M5 19h14" />
                 </svg>
@@ -182,12 +183,12 @@
               {{template "frame" .SVGContent}}
               <button
                 type="button"
-                class="download-png absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-sm border border-black/10 bg-white/85 text-black opacity-70 shadow-subtle backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-white hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black sm:opacity-0 sm:group-hover:opacity-100"
+                class="download-png absolute top-2 right-2 z-10 flex h-7 w-7 items-center justify-center rounded-sm border border-border bg-bg/85 text-fg opacity-60 shadow-subtle backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-bg hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg sm:opacity-0 sm:group-hover:opacity-100"
                 data-title="{{$.Group.Title}}-{{modelName .Model}}"
                 aria-label="Download {{modelName .Model}} result as PNG"
                 title="Download PNG"
               >
-                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
                   <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
                   <path d="M5 19h14" />
                 </svg>

@@ -51,8 +51,42 @@
       </svg>
       View source on GitHub
     </a>
+
+    <span class="hidden lg:inline text-fg/40">|</span>
+
+    <label class="inline-flex items-center gap-2 font-medium">
+      <span>Theme</span>
+      <select
+        data-theme-select
+        class="border border-border bg-bg px-2 py-1 text-xs text-fg focus:border-fg focus:outline-none"
+        aria-label="Color theme"
+      >
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </label>
   </div>
 </footer>
-{{end}} {{define "plausible"}}
+<script src="/static/js/theme.js" defer></script>
+{{end}}
+
+{{define "theme-init"}}
+<script>
+  (function () {
+    try {
+      var preference = localStorage.getItem("pelican-theme");
+      if (preference !== "light" && preference !== "dark") preference = "system";
+      var resolved = preference === "system"
+        ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+        : preference;
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.dataset.themePreference = preference;
+    } catch (_) {}
+  })();
+</script>
+{{end}}
+
+{{define "plausible"}}
 <script defer data-domain="pelican.koenvangilst.nl" src="https://plausible.koenvangilst.nl/js/script.js"></script>
 {{end}}
