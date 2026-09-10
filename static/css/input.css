@@ -55,3 +55,24 @@ html {
   visibility: hidden;
   pointer-events: none;
 }
+
+/* Shared layout for artwork grids in overview and group views. */
+.artwork-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 2rem;
+  width: 100%;
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+.artwork-grid > * {
+  width: 100%;
+}
+
+@media (min-width: 40rem) {
+  .artwork-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
