@@ -406,8 +406,18 @@ func main() {
 	}))
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if r.Method == http.MethodGet {
+			_, _ = w.Write([]byte("OK"))
+		}
 	})
 
 	port := os.Getenv("PORT")

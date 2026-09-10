@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["go_1_21"]
+nixPkgs = ["go_1_21", "curl"]
 
 [phases.install]
 cmds = ["make install"]
