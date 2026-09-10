@@ -152,21 +152,45 @@
       <main class="flex-1 w-full max-w-6xl mx-auto px-6 py-8">
         <section class="grid grid-cols-1 md:grid-cols-2 gap-12">
           {{if .HasOriginalArtwork}}
-          <figure id="original-artwork" class="flex flex-col items-center gap-4" data-model="original">
-            <div class="w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">
+          <figure id="original-artwork" class="group flex flex-col items-center gap-4" data-model="original">
+            <div class="relative w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">
               <img
                 src="/api/groups/{{.Group.ID}}/original-artwork"
                 alt="Original {{.Group.Title}}"
                 class="max-w-full max-h-full object-contain"
               />
+              <button
+                type="button"
+                class="download-png absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-sm border border-black/10 bg-white/85 text-black opacity-70 shadow-subtle backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-white hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black sm:opacity-0 sm:group-hover:opacity-100"
+                data-title="{{.Group.Title}}-original"
+                aria-label="Download original artwork as PNG"
+                title="Download PNG"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                  <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
+                  <path d="M5 19h14" />
+                </svg>
+              </button>
             </div>
             <figcaption class="text-center text-sm font-bold tracking-wide">Original Artwork</figcaption>
           </figure>
           {{end}}
           {{range .Artworks}}
-          <figure id="artwork-{{.ID}}" class="flex flex-col items-center gap-4" data-model="{{.Model}}">
-            <div class="w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">
+          <figure id="artwork-{{.ID}}" class="group flex flex-col items-center gap-4" data-model="{{.Model}}">
+            <div class="relative w-full h-full max-h-[70vh] flex items-center justify-center overflow-hidden">
               {{template "frame" .SVGContent}}
+              <button
+                type="button"
+                class="download-png absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-sm border border-black/10 bg-white/85 text-black opacity-70 shadow-subtle backdrop-blur-sm transition-[opacity,background-color] duration-200 hover:bg-white hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black sm:opacity-0 sm:group-hover:opacity-100"
+                data-title="{{$.Group.Title}}-{{modelName .Model}}"
+                aria-label="Download {{modelName .Model}} result as PNG"
+                title="Download PNG"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                  <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
+                  <path d="M5 19h14" />
+                </svg>
+              </button>
             </div>
             <figcaption class="text-center text-sm font-bold tracking-wide">{{modelName .Model}}</figcaption>
           </figure>
@@ -203,6 +227,7 @@
       {{end}}
     </nav>
 
+    <script src="/static/js/artwork-download.js" defer></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const filterToggle = document.getElementById("filter-toggle");
