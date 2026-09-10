@@ -254,8 +254,18 @@ func main() {
 		log.Fatalf("Failed to parse template: %v", err)
 	}
 
+	availableModels := config.GetAvailableModels()
+	if config.IsEditingEnabled() {
+		updated, err := db.BackfillArtworkModelMetadata(availableModels)
+		if err != nil {
+			log.Printf("WARNING: Could not backfill artwork model metadata: %v", err)
+		} else if updated > 0 {
+			log.Printf("Backfilled OpenRouter metadata for %d artworks", updated)
+		}
+	}
+
 	templateData := models.TemplateData{
-		Models:         config.GetAvailableModels(),
+		Models:         availableModels,
 		EditingEnabled: config.IsEditingEnabled(),
 	}
 

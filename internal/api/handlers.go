@@ -494,6 +494,7 @@ func (h *Handler) CreateArtworkHandler(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt:   time.Now(),
 	}
 	if modelInfo, ok := config.GetModelInfo(strings.TrimSuffix(strings.ToLower(req.Model), ":free")); ok {
+		artwork.ModelName = modelInfo.Name
 		artwork.ModelCreatedAt = modelInfo.Created
 	}
 

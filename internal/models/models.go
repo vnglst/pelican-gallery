@@ -34,6 +34,7 @@ type Artwork struct {
 	ID             int       `db:"id" json:"id"`
 	GroupID        int       `db:"group_id" json:"group_id"`
 	Model          string    `db:"model" json:"model"`
+	ModelName      string    `db:"model_name" json:"model_name"`
 	ModelCreatedAt int64     `db:"model_created_at" json:"model_created_at"`
 	Temperature    float64   `db:"temperature" json:"temperature"`
 	MaxTokens      int       `db:"max_tokens" json:"max_tokens"`

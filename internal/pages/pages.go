@@ -105,16 +105,20 @@ func modelVersionLess(left, right string) bool {
 func chronologyModelName(model string) string {
 	lookupID := strings.TrimSuffix(strings.ToLower(model), ":free")
 	if info, ok := config.GetModelInfo(lookupID); ok && info.Name != "" {
-		if _, name, found := strings.Cut(info.Name, ": "); found {
-			return name
-		}
-		return info.Name
+		return chronologyDisplayName(info.Name)
 	}
 	_, name, found := strings.Cut(model, "/")
 	if found {
 		return name
 	}
 	return model
+}
+
+func chronologyDisplayName(name string) string {
+	if _, displayName, found := strings.Cut(name, ": "); found {
+		return displayName
+	}
+	return name
 }
 
 // TemplateParser is a function type for parsing templates
@@ -476,10 +480,14 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 			continue
 		}
 		releasedAt, hasReleaseDate := modelReleaseDate(artwork.Model, artwork.ModelCreatedAt)
+		displayName := chronologyDisplayName(artwork.ModelName)
+		if displayName == "" {
+			displayName = chronologyModelName(artwork.Model)
+		}
 		artList = append(artList, ArtworkWithHTML{
 			Artwork:        artwork,
 			SVGContent:     template.HTML(artwork.SVG),
-			DisplayName:    chronologyModelName(artwork.Model),
+			DisplayName:    displayName,
 			ReleasedAt:     releasedAt,
 			HasReleaseDate: hasReleaseDate,
 		})

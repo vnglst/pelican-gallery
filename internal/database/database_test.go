@@ -39,6 +39,7 @@ func TestNewMigratesExistingArtworksTable(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rows.Close()
+	found := map[string]bool{}
 	for rows.Next() {
 		var cid, notNull, primaryKey int
 		var name, columnType string
@@ -46,14 +47,16 @@ func TestNewMigratesExistingArtworksTable(t *testing.T) {
 		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
 			t.Fatal(err)
 		}
-		if name == "model_created_at" {
-			return
+		found[name] = true
+	}
+	for _, column := range []string{"model_name", "model_created_at"} {
+		if !found[column] {
+			t.Fatalf("%s column was not added", column)
 		}
 	}
-	t.Fatal("model_created_at column was not added")
 }
 
-func TestCreateArtworkPersistsModelCreatedAt(t *testing.T) {
+func TestCreateArtworkPersistsModelMetadata(t *testing.T) {
 	db, err := New(filepath.Join(t.TempDir(), "gallery.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -70,7 +73,7 @@ func TestCreateArtworkPersistsModelCreatedAt(t *testing.T) {
 
 	const modelCreatedAt = int64(1_755_000_000)
 	artworkID, err := db.CreateArtwork(models.Artwork{
-		GroupID: groupID, Model: "example/model-1", ModelCreatedAt: modelCreatedAt,
+		GroupID: groupID, Model: "example/model-1", ModelName: "Example Model 1", ModelCreatedAt: modelCreatedAt,
 		CreatedAt: now, UpdatedAt: now,
 	})
 	if err != nil {
@@ -83,5 +86,41 @@ func TestCreateArtworkPersistsModelCreatedAt(t *testing.T) {
 	}
 	if artwork.ModelCreatedAt != modelCreatedAt {
 		t.Fatalf("ModelCreatedAt = %d, want %d", artwork.ModelCreatedAt, modelCreatedAt)
+	}
+	if artwork.ModelName != "Example Model 1" {
+		t.Fatalf("ModelName = %q, want %q", artwork.ModelName, "Example Model 1")
+	}
+}
+
+func TestBackfillArtworkModelMetadataPreservesExistingValues(t *testing.T) {
+	db, err := New(filepath.Join(t.TempDir(), "gallery.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	groupID, err := db.CreateGroup(models.ArtworkGroup{Title: "Test", Prompt: "Test", CreatedAt: now, UpdatedAt: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	artworkID, err := db.CreateArtwork(models.Artwork{GroupID: groupID, Model: "example/model:free", ModelName: "Stored name", CreatedAt: now, UpdatedAt: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := db.BackfillArtworkModelMetadata([]models.ModelInfo{{ID: "example/model", Name: "Live name", Created: 1234}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated != 1 {
+		t.Fatalf("updated = %d, want 1", updated)
+	}
+	artwork, err := db.GetArtwork(artworkID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if artwork.ModelName != "Stored name" || artwork.ModelCreatedAt != 1234 {
+		t.Fatalf("metadata = (%q, %d), want (%q, %d)", artwork.ModelName, artwork.ModelCreatedAt, "Stored name", 1234)
 	}
 }
