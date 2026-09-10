@@ -43,6 +43,19 @@ This repository stores the SQLite database (`artworks.db`) using [Git Large File
 - After cloning or pulling changes, run `git lfs pull` to download the latest database snapshot.
 - When updating `artworks.db`, commit as usual—Git LFS transparently stores the binary contents out of band.
 
+## Coolify deployment
+
+Use the **Dockerfile** build pack and expose port `8080`. For rolling deployments, enable an HTTP health check with:
+
+- Method: `GET`
+- Host: `localhost`
+- Port: `8080`
+- Path: `/health`
+- Expected code: `200`
+- Expected response: `OK`
+
+The Dockerfile uses separate cached layers for Go modules, Tailwind CSS, and Go compilation so routine source changes do not rebuild the toolchain.
+
 ## Development
 
 ### Available Commands

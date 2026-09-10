@@ -1,0 +1,9 @@
+.git
+.github
+.claude
+.env
+.DS_Store
+bin
+tmp
+static/css/output.css
+*.log
