@@ -2,6 +2,7 @@ package pages
 
 import (
 	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -53,7 +54,16 @@ var modelReleaseDates = map[string]time.Time{
 var modelVersionPattern = regexp.MustCompile(`\d+`)
 var openSourceDescriptionPattern = regexp.MustCompile(`(?i)\bopen[- ](?:weight|weights|source)\b`)
 
-func modelProvider(model string) string {
+func modelProvider(model, storedMetadata string) string {
+	var stored struct {
+		HuggingFaceID string `json:"hugging_face_id"`
+		Description   string `json:"description"`
+	}
+	if storedMetadata != "" && json.Unmarshal([]byte(storedMetadata), &stored) == nil &&
+		(stored.HuggingFaceID != "" || openSourceDescriptionPattern.MatchString(stored.Description)) {
+		return FilterOpenSource
+	}
+
 	lookupID := strings.TrimSuffix(strings.ToLower(model), ":free")
 	if info, ok := config.GetModelInfo(lookupID); ok && (info.HuggingFaceID != "" || openSourceDescriptionPattern.MatchString(info.Description)) {
 		return FilterOpenSource
@@ -450,7 +460,7 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		FilterOpenAI: 0, FilterAnthropic: 0, FilterGoogle: 0, FilterOpenSource: 0,
 	}
 	for _, artwork := range artworks {
-		if category := modelProvider(artwork.Model); category != "" {
+		if category := modelProvider(artwork.Model, artwork.ModelMetadata); category != "" {
 			providerCounts[category]++
 		}
 	}
@@ -476,7 +486,7 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 
 	var artList []ArtworkWithHTML
 	for _, artwork := range artworks {
-		if modelProvider(artwork.Model) != provider {
+		if modelProvider(artwork.Model, artwork.ModelMetadata) != provider {
 			continue
 		}
 		releasedAt, hasReleaseDate := modelReleaseDate(artwork.Model, artwork.ModelCreatedAt)

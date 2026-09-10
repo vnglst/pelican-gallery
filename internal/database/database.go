@@ -62,6 +62,7 @@ func (db *DB) CreateTables() error {
 		model TEXT NOT NULL,
 		model_name TEXT NOT NULL DEFAULT '',
 		model_created_at INTEGER NOT NULL DEFAULT 0,
+		model_metadata_json TEXT NOT NULL DEFAULT '',
 		temperature REAL NOT NULL DEFAULT 0.0,
 		max_tokens INTEGER NOT NULL DEFAULT 0,
 		svg TEXT DEFAULT '',
@@ -119,6 +120,7 @@ func (db *DB) ensureArtworkMetadataColumns() error {
 	}{
 		{"model_name", "TEXT NOT NULL DEFAULT ''"},
 		{"model_created_at", "INTEGER NOT NULL DEFAULT 0"},
+		{"model_metadata_json", "TEXT NOT NULL DEFAULT ''"},
 	}
 	for _, column := range columns {
 		exists, err := db.artworkColumnExists(column.name)
@@ -255,11 +257,11 @@ func (db *DB) ListGroups() ([]models.ArtworkGroup, error) {
 // CreateArtwork creates a new artwork
 func (db *DB) CreateArtwork(artwork models.Artwork) (int, error) {
 	query := `
-	INSERT INTO artworks (group_id, model, model_name, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO artworks (group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.ModelName, artwork.ModelCreatedAt, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.Featured, artwork.CreatedAt, artwork.UpdatedAt)
+	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.ModelName, artwork.ModelCreatedAt, artwork.ModelMetadata, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.Featured, artwork.CreatedAt, artwork.UpdatedAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create artwork: %w", err)
 	}
@@ -282,7 +284,7 @@ func (db *DB) BackfillArtworkModelMetadata(modelInfos []models.ModelInfo) (int64
 
 	rows, err := db.conn.Query(`
 		SELECT DISTINCT model FROM artworks
-		WHERE model_name = '' OR model_created_at = 0
+		WHERE model_name = '' OR model_created_at = 0 OR model_metadata_json = ''
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("failed to list artwork models for metadata backfill: %w", err)
@@ -316,9 +318,10 @@ func (db *DB) BackfillArtworkModelMetadata(modelInfos []models.ModelInfo) (int64
 		result, err := tx.Exec(`
 			UPDATE artworks
 			SET model_name = CASE WHEN model_name = '' THEN ? ELSE model_name END,
-				model_created_at = CASE WHEN model_created_at = 0 THEN ? ELSE model_created_at END
-			WHERE model = ? AND (model_name = '' OR model_created_at = 0)
-		`, info.Name, info.Created, modelID)
+				model_created_at = CASE WHEN model_created_at = 0 THEN ? ELSE model_created_at END,
+				model_metadata_json = CASE WHEN model_metadata_json = '' THEN ? ELSE model_metadata_json END
+			WHERE model = ? AND (model_name = '' OR model_created_at = 0 OR model_metadata_json = '')
+		`, info.Name, info.Created, info.MetadataJSON, modelID)
 		if err != nil {
 			return 0, fmt.Errorf("failed to backfill metadata for %s: %w", modelID, err)
 		}
@@ -337,7 +340,7 @@ func (db *DB) BackfillArtworkModelMetadata(modelInfos []models.ModelInfo) (int64
 // GetArtwork retrieves an artwork by ID
 func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, model_name, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE id = ?
 	`
@@ -349,6 +352,7 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 		&artwork.Model,
 		&artwork.ModelName,
 		&artwork.ModelCreatedAt,
+		&artwork.ModelMetadata,
 		&artwork.Temperature,
 		&artwork.MaxTokens,
 		&artwork.SVG,
@@ -370,7 +374,7 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 // ListArtworksByGroup retrieves all artworks for a group
 func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, model_name, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE group_id = ?
 	ORDER BY model ASC
@@ -391,6 +395,7 @@ func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 			&artwork.Model,
 			&artwork.ModelName,
 			&artwork.ModelCreatedAt,
+			&artwork.ModelMetadata,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
@@ -607,7 +612,7 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 	}
 
 	artworkQuery := fmt.Sprintf(`
-	SELECT id, group_id, model, model_name, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
 	FROM artworks
 	WHERE group_id IN (%s)
 	ORDER BY group_id, model ASC
@@ -633,6 +638,7 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 			&artwork.Model,
 			&artwork.ModelName,
 			&artwork.ModelCreatedAt,
+			&artwork.ModelMetadata,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
@@ -723,7 +729,7 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 
 	// Get artworks for this group, filtered by the two models
 	artworkQuery := `
-		SELECT id, group_id, model, model_name, model_created_at, temperature, max_tokens, svg, featured, created_at, updated_at
+		SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
 		FROM artworks
 		WHERE group_id = ? AND (model LIKE ? OR model LIKE ?)
 		ORDER BY CASE
@@ -748,6 +754,7 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 			&artwork.Model,
 			&artwork.ModelName,
 			&artwork.ModelCreatedAt,
+			&artwork.ModelMetadata,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,

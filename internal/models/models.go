@@ -36,6 +36,7 @@ type Artwork struct {
 	Model          string    `db:"model" json:"model"`
 	ModelName      string    `db:"model_name" json:"model_name"`
 	ModelCreatedAt int64     `db:"model_created_at" json:"model_created_at"`
+	ModelMetadata  string    `db:"model_metadata_json" json:"-"`
 	Temperature    float64   `db:"temperature" json:"temperature"`
 	MaxTokens      int       `db:"max_tokens" json:"max_tokens"`
 	SVG            string    `db:"svg" json:"svg"`
@@ -91,6 +92,7 @@ type ModelInfo struct {
 	Created             int64   `json:"created,omitempty"`
 	HuggingFaceID       string  `json:"hugging_face_id,omitempty"`
 	Description         string  `json:"description,omitempty"`
+	MetadataJSON        string  `json:"-"`
 	Checked             bool    `json:"checked"`
 	Cost                float64 `json:"cost"` // Cost per 1M output tokens in dollars
 	ContextLength       int     `json:"context_length,omitempty"`

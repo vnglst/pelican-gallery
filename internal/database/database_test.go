@@ -49,7 +49,7 @@ func TestNewMigratesExistingArtworksTable(t *testing.T) {
 		}
 		found[name] = true
 	}
-	for _, column := range []string{"model_name", "model_created_at"} {
+	for _, column := range []string{"model_name", "model_created_at", "model_metadata_json"} {
 		if !found[column] {
 			t.Fatalf("%s column was not added", column)
 		}
@@ -74,7 +74,7 @@ func TestCreateArtworkPersistsModelMetadata(t *testing.T) {
 	const modelCreatedAt = int64(1_755_000_000)
 	artworkID, err := db.CreateArtwork(models.Artwork{
 		GroupID: groupID, Model: "example/model-1", ModelName: "Example Model 1", ModelCreatedAt: modelCreatedAt,
-		CreatedAt: now, UpdatedAt: now,
+		ModelMetadata: `{"id":"example/model-1"}`, CreatedAt: now, UpdatedAt: now,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -89,6 +89,9 @@ func TestCreateArtworkPersistsModelMetadata(t *testing.T) {
 	}
 	if artwork.ModelName != "Example Model 1" {
 		t.Fatalf("ModelName = %q, want %q", artwork.ModelName, "Example Model 1")
+	}
+	if artwork.ModelMetadata != `{"id":"example/model-1"}` {
+		t.Fatalf("ModelMetadata = %q", artwork.ModelMetadata)
 	}
 }
 
@@ -109,7 +112,7 @@ func TestBackfillArtworkModelMetadataPreservesExistingValues(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	updated, err := db.BackfillArtworkModelMetadata([]models.ModelInfo{{ID: "example/model", Name: "Live name", Created: 1234}})
+	updated, err := db.BackfillArtworkModelMetadata([]models.ModelInfo{{ID: "example/model", Name: "Live name", Created: 1234, MetadataJSON: `{"id":"example/model"}`}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +123,7 @@ func TestBackfillArtworkModelMetadataPreservesExistingValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if artwork.ModelName != "Stored name" || artwork.ModelCreatedAt != 1234 {
-		t.Fatalf("metadata = (%q, %d), want (%q, %d)", artwork.ModelName, artwork.ModelCreatedAt, "Stored name", 1234)
+	if artwork.ModelName != "Stored name" || artwork.ModelCreatedAt != 1234 || artwork.ModelMetadata == "" {
+		t.Fatalf("metadata = (%q, %d, %q)", artwork.ModelName, artwork.ModelCreatedAt, artwork.ModelMetadata)
 	}
 }

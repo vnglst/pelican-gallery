@@ -24,7 +24,7 @@ var (
 )
 
 type openRouterResponse struct {
-	Data []openRouterModel `json:"data"`
+	Data []json.RawMessage `json:"data"`
 }
 
 type openRouterModel struct {
@@ -130,7 +130,11 @@ func fetchOpenRouterModels() ([]models.ModelInfo, error) {
 	}
 
 	var modelInfos []models.ModelInfo
-	for _, model := range apiResp.Data {
+	for _, rawModel := range apiResp.Data {
+		var model openRouterModel
+		if err := json.Unmarshal(rawModel, &model); err != nil {
+			continue
+		}
 		cost := 0.0
 		if completion, ok := model.Pricing["completion"].(string); ok {
 			if f, err := parseFloat(completion); err == nil {
@@ -144,6 +148,7 @@ func fetchOpenRouterModels() ([]models.ModelInfo, error) {
 			Created:             model.Created,
 			HuggingFaceID:       model.HuggingFaceID,
 			Description:         model.Description,
+			MetadataJSON:        string(rawModel),
 			Cost:                cost,
 			ContextLength:       model.TopProvider.ContextLength,
 			MaxCompletionTokens: model.TopProvider.MaxCompletionTokens,
