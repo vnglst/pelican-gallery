@@ -265,17 +265,29 @@ html {
   padding-bottom: 0.75rem;
 }
 
-.workshop-card-header {
-  min-height: 8rem;
-  justify-content: space-between;
-}
-
-.workshop-card-header h3 {
+.workshop-artwork-card .chronology-card-header h3 {
   font-size: 1rem;
   line-height: 1.15;
 }
 
-.workshop-artwork-card .chronology-artwork,
-.workshop-original-card .chronology-artwork {
-  aspect-ratio: 1 / 1.05;
+.workshop-card-actions {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 20;
+  display: flex;
+  width: auto !important;
+  max-height: none !important;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.workshop-card-actions button {
+  width: 1.875rem;
+  height: 1.875rem;
+}
+
+.workshop-card-actions button + button {
+  border-left: 1px solid var(--color-border);
 }

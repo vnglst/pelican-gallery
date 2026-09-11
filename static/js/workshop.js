@@ -409,8 +409,8 @@ const WorkshopApp = () => {
   return html`
     <div>
       <!-- Group Form -->
-      <div class="lg:grid lg:grid-cols-3 lg:gap-8 space-y-8 lg:space-y-0">
-        <div class="space-y-6">
+      <div class="space-y-12">
+        <div class="w-full max-w-3xl mx-auto space-y-6">
           <div class="space-y-6">
             <div class="space-y-2">
               <label for="prompt-input" class="block text-sm font-medium">Describe your artwork</label>
@@ -535,8 +535,8 @@ const WorkshopApp = () => {
           </div>
         </div>
 
-        <div class="lg:col-span-2 min-w-0 space-y-5">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="min-w-0 space-y-5">
+          <div class="relative flex w-full min-w-0 flex-col items-center gap-3">
             <div class="provider-tabs scrollbar-hide !m-0" aria-label="Model provider">
               ${visibleProviders.map(
                 (provider) => html`
@@ -549,7 +549,7 @@ const WorkshopApp = () => {
               )}
             </div>
             <button
-              class="self-end shrink-0 px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors text-sm font-medium"
+              class="self-center sm:absolute sm:right-0 sm:top-0 shrink-0 px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors text-sm font-medium"
               onClick=${handleAddModel}
             >+ Add model</button>
           </div>
