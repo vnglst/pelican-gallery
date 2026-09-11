@@ -2,7 +2,9 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,6 +19,22 @@ import (
 	"pelican-gallery/internal/database"
 	"pelican-gallery/internal/models"
 )
+
+const defaultGenerationTimeout = 10 * time.Minute
+
+func generationTimeoutMessage() string {
+	timeout := generationTimeout()
+	limit := timeout.String()
+	if timeout%time.Minute == 0 {
+		minutes := int(timeout / time.Minute)
+		unit := "minutes"
+		if minutes == 1 {
+			unit = "minute"
+		}
+		limit = fmt.Sprintf("%d %s", minutes, unit)
+	}
+	return fmt.Sprintf("Generation was stopped after %s while waiting for the AI provider. The model may be busy or producing a long response; please retry or choose a faster model.", limit)
+}
 
 // Handler contains the API handlers
 type Handler struct {
@@ -126,9 +144,13 @@ func (h *Handler) GenerateHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Generate SVG request: model=%s, prompt length=%d", req.Model, len(req.Prompt))
 
-	svg, usage, err := h.generateSVG(req.Prompt, req.Model, req.Temperature, req.MaxTokens)
+	svg, usage, err := h.generateSVG(r.Context(), req.Prompt, req.Model, req.Temperature, req.MaxTokens)
 	if err != nil {
 		log.Printf("Error generating SVG: %v", err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			writeJSONError(w, http.StatusGatewayTimeout, generationTimeoutMessage())
+			return
+		}
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -144,7 +166,7 @@ func (h *Handler) GenerateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // generateSVG calls the OpenRouter API to generate SVG
-func (h *Handler) generateSVG(prompt, model string, temperature float64, maxTokens int) (string, models.GenerationUsage, error) {
+func (h *Handler) generateSVG(parentContext context.Context, prompt, model string, temperature float64, maxTokens int) (string, models.GenerationUsage, error) {
 	var usage models.GenerationUsage
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
 	if apiKey == "" {
@@ -201,7 +223,9 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 		return "", usage, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
+	requestContext, cancel := context.WithTimeout(parentContext, generationTimeout())
+	defer cancel()
+	req, err := http.NewRequestWithContext(requestContext, "POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
 
 	if err != nil {
 		return "", usage, fmt.Errorf("failed to create request: %w", err)
@@ -211,9 +235,7 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("X-Title", "Pelican Art Gallery")
 
-	client := &http.Client{
-		Timeout: 300 * time.Second, // 5 minutes
-	}
+	client := &http.Client{}
 	log.Printf("Making request to OpenRouter API...")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -267,6 +289,15 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 	log.Printf("OpenRouter usage: prompt=%d completion=%d total=%d cost=$%.6f", usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, usage.CostUSD)
 
 	return svgContent, usage, nil
+}
+
+func generationTimeout() time.Duration {
+	if raw := os.Getenv("OPENROUTER_TIMEOUT_SECONDS"); raw != "" {
+		if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
+			return time.Duration(seconds) * time.Second
+		}
+	}
+	return defaultGenerationTimeout
 }
 
 // DeleteArtworkHandler handles artwork deletion requests
@@ -616,9 +647,13 @@ func (h *Handler) GenerateArtworkHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	svg, usage, err := h.generateSVG(group.Prompt, artwork.Model, artwork.Temperature, artwork.MaxTokens)
+	svg, usage, err := h.generateSVG(r.Context(), group.Prompt, artwork.Model, artwork.Temperature, artwork.MaxTokens)
 	if err != nil {
 		log.Printf("Error generating SVG for artwork %d: %v", req.ArtworkID, err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			writeJSONError(w, http.StatusGatewayTimeout, generationTimeoutMessage())
+			return
+		}
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

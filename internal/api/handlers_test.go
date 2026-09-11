@@ -2,6 +2,7 @@ package api
 
 import (
 	"testing"
+	"time"
 
 	"pelican-gallery/internal/models"
 )
@@ -26,5 +27,25 @@ func TestEffectiveMaxTokens(t *testing.T) {
 				t.Fatalf("effectiveMaxTokens(%d) = %d, want %d", tt.in, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGenerationTimeout(t *testing.T) {
+	t.Setenv("OPENROUTER_TIMEOUT_SECONDS", "12")
+	if got := generationTimeout(); got != 12*time.Second {
+		t.Fatalf("generationTimeout() = %v, want 12s", got)
+	}
+
+	t.Setenv("OPENROUTER_TIMEOUT_SECONDS", "invalid")
+	if got := generationTimeout(); got != defaultGenerationTimeout {
+		t.Fatalf("generationTimeout() = %v, want default %v", got, defaultGenerationTimeout)
+	}
+}
+
+func TestGenerationTimeoutMessage(t *testing.T) {
+	t.Setenv("OPENROUTER_TIMEOUT_SECONDS", "600")
+	want := "Generation was stopped after 10 minutes while waiting for the AI provider. The model may be busy or producing a long response; please retry or choose a faster model."
+	if got := generationTimeoutMessage(); got != want {
+		t.Fatalf("generationTimeoutMessage() = %q, want %q", got, want)
 	}
 }
