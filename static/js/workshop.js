@@ -1,11 +1,33 @@
-import { html, render, useReducer, useEffect } from "https://esm.sh/htm/preact/standalone";
+import { html, render, useReducer, useEffect, useState } from "https://esm.sh/htm/preact/standalone";
 import api from "/static/js/modules/api.js";
 import { ToastContainer, LoadingOverlay, ArtworkCard } from "/static/js/modules/components.js";
 import { ModelModal, ConfigModal } from "/static/js/modules/modals.js";
 import { createInitialState, reducer } from "/static/js/modules/state.js";
 
+const providerOrder = ["openai", "google", "anthropic", "open-source"];
+const providerLabels = { openai: "OpenAI", google: "Google", anthropic: "Anthropic", "open-source": "Open source" };
+
+const versionParts = (model) => (String(model).match(/\d+/g) || []).map(Number);
+const compareVersions = (left, right) => {
+  const a = versionParts(left.model);
+  const b = versionParts(right.model);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index] !== b[index]) return a[index] - b[index];
+  }
+  if (a.length !== b.length) return a.length - b.length;
+  return String(left.model).localeCompare(String(right.model));
+};
+
+const compareChronology = (left, right) => {
+  if (left.model_sort_time && right.model_sort_time && left.model_sort_time !== right.model_sort_time) {
+    return left.model_sort_time - right.model_sort_time;
+  }
+  return compareVersions(left, right);
+};
+
 const WorkshopApp = () => {
   const [state, dispatch] = useReducer(reducer, createInitialState(window));
+  const [activeProvider, setActiveProvider] = useState("openai");
 
   const showToast = (message, type = "info") => dispatch({ type: "PUSH_TOAST", payload: { message, type } });
   const removeToast = (index) => dispatch({ type: "REMOVE_TOAST", payload: index });
@@ -294,7 +316,7 @@ const WorkshopApp = () => {
         temperature: params.temperature,
         max_tokens: params.max_tokens,
       });
-      dispatch({ type: "UPDATE_ARTWORK", payload: updated });
+      dispatch({ type: "UPDATE_ARTWORK", payload: { ...state.artworks.get(Number(artworkId)), ...updated } });
       showToast("Parameters updated", "success");
     } catch (error) {
       showToast("Failed to update parameters: " + error.message, "error");
@@ -374,6 +396,15 @@ const WorkshopApp = () => {
 
   // Form values
   const isEditing = !!state.currentGroup?.id;
+  const artworkList = Array.from(state.artworks.values());
+  const providerCounts = Object.fromEntries(
+    providerOrder.map((provider) => [provider, artworkList.filter((artwork) => artwork.model_provider === provider).length])
+  );
+  const visibleProviders = providerOrder.filter((provider) => providerCounts[provider] > 0);
+  const selectedProvider = providerCounts[activeProvider] > 0 ? activeProvider : visibleProviders[0];
+  const chronologicalArtworks = artworkList
+    .filter((artwork) => artwork.model_provider === selectedProvider)
+    .sort(compareChronology);
 
   return html`
     <div>
@@ -460,7 +491,7 @@ const WorkshopApp = () => {
                     key=${state.originalArtworkUploaded}
                     src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}"
                     alt="Original artwork"
-                    class="max-w-full h-auto border border-border"
+                    class="w-full max-h-64 object-contain border border-border"
                   />
                 `}
                 ${state.selectedFile &&
@@ -504,36 +535,53 @@ const WorkshopApp = () => {
           </div>
         </div>
 
-        <div class="lg:col-span-2 space-y-6">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            ${Array.from(state.artworks.entries()).map(
-              ([id, artwork]) =>
+        <div class="lg:col-span-2 min-w-0 space-y-5">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="provider-tabs scrollbar-hide !m-0" aria-label="Model provider">
+              ${visibleProviders.map(
+                (provider) => html`
+                  <button
+                    class="provider-tab"
+                    aria-current=${selectedProvider === provider ? "page" : null}
+                    onClick=${() => setActiveProvider(provider)}
+                  >${providerLabels[provider]} <span>${providerCounts[provider]}</span></button>
+                `
+              )}
+            </div>
+            <button
+              class="self-end shrink-0 px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors text-sm font-medium"
+              onClick=${handleAddModel}
+            >+ Add model</button>
+          </div>
+
+          <div class="chronology workshop-chronology scrollbar-hide" aria-label="Model chronology">
+            ${chronologicalArtworks.map(
+              (artwork) =>
                 html`
                   <${ArtworkCard}
-                    key=${id}
+                    key=${artwork.id}
                     artwork=${artwork}
                     onRegenerate=${generateArtwork}
                     onConfigure=${handleConfigure}
                     onRemove=${removeArtwork}
                     onToggleFeatured=${toggleFeatured}
-                    isGenerating=${state.generatingArtworks.has(Number(id))}
+                    isGenerating=${state.generatingArtworks.has(Number(artwork.id))}
                   />
                 `
             )}
-            <!-- Add Model Card -->
-            <div class="border border-border p-8 text-center space-y-6">
-              <h3 class="font-semibold mt-auto">Add AI Model</h3>
-              <p class="text-sm text-fg/70">Select AI models to generate artwork variations</p>
-              <button
-                class="w-full px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors duration-200 text-sm font-medium flex items-center justify-center gap-2"
-                onClick=${handleAddModel}
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-                Add Model
-              </button>
-            </div>
+            ${state.currentGroup?.id && state.originalArtworkUploaded > 0 && html`
+              <div class="chronology-original">
+                <figure class="chronology-card workshop-original-card">
+                  <figcaption class="chronology-card-header chronology-card-header-original">
+                    <strong>Original</strong>
+                    <span>${state.formData.artist_name || "Source artwork"}</span>
+                  </figcaption>
+                  <div class="chronology-artwork">
+                    <img src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}" alt="Original artwork" />
+                  </div>
+                </figure>
+              </div>
+            `}
           </div>
         </div>
       </div>

@@ -374,6 +374,14 @@ func (h *PageHandler) WorkshopHandler(w http.ResponseWriter, r *http.Request) {
 				editArtworks, err = h.db.ListArtworksByGroup(editID)
 				if err != nil {
 					log.Printf("Error fetching artworks for group %d: %v", editID, err)
+				} else {
+					for i := range editArtworks {
+						editArtworks[i].ModelProvider = modelProvider(editArtworks[i].Model, editArtworks[i].ModelMetadata)
+						if releasedAt, ok := modelReleaseDate(editArtworks[i].Model, editArtworks[i].ModelCreatedAt); ok {
+							editArtworks[i].ModelYear = releasedAt.Year()
+							editArtworks[i].ModelSortTime = releasedAt.Unix()
+						}
+					}
 				}
 				log.Printf("Found group %d with %d artwork(s) for editing: %s", editID, len(editArtworks), group.Title)
 			}

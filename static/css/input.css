@@ -259,3 +259,23 @@ html {
   .chronology-download { opacity: 0; }
   .chronology-card:hover .chronology-download { opacity: 0.55; }
 }
+
+.workshop-chronology {
+  width: 100%;
+  padding-bottom: 0.75rem;
+}
+
+.workshop-card-header {
+  min-height: 8rem;
+  justify-content: space-between;
+}
+
+.workshop-card-header h3 {
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.workshop-artwork-card .chronology-artwork,
+.workshop-original-card .chronology-artwork {
+  aspect-ratio: 1 / 1.05;
+}

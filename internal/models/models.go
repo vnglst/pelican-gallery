@@ -37,6 +37,9 @@ type Artwork struct {
 	ModelName      string    `db:"model_name" json:"model_name"`
 	ModelCreatedAt int64     `db:"model_created_at" json:"model_created_at"`
 	ModelMetadata  string    `db:"model_metadata_json" json:"-"`
+	ModelProvider  string    `db:"-" json:"model_provider,omitempty"`
+	ModelYear      int       `db:"-" json:"model_year,omitempty"`
+	ModelSortTime  int64     `db:"-" json:"model_sort_time,omitempty"`
 	Temperature    float64   `db:"temperature" json:"temperature"`
 	MaxTokens      int       `db:"max_tokens" json:"max_tokens"`
 	SVG            string    `db:"svg" json:"svg"`

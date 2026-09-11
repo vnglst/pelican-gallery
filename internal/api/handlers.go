@@ -497,6 +497,17 @@ func (h *Handler) CreateArtworkHandler(w http.ResponseWriter, r *http.Request) {
 		artwork.ModelName = modelInfo.Name
 		artwork.ModelCreatedAt = modelInfo.Created
 		artwork.ModelMetadata = modelInfo.MetadataJSON
+		artwork.ModelYear = time.Unix(modelInfo.Created, 0).UTC().Year()
+		artwork.ModelSortTime = modelInfo.Created
+		if modelInfo.HuggingFaceID != "" || strings.Contains(strings.ToLower(modelInfo.Description), "open-weight") || strings.Contains(strings.ToLower(modelInfo.Description), "open source") {
+			artwork.ModelProvider = "open-source"
+		}
+	}
+	if artwork.ModelProvider == "" {
+		provider, _, _ := strings.Cut(strings.ToLower(req.Model), "/")
+		if provider == "openai" || provider == "google" || provider == "anthropic" {
+			artwork.ModelProvider = provider
+		}
 	}
 
 	id, err := h.db.CreateArtwork(artwork)

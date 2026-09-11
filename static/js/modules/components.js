@@ -99,14 +99,15 @@ export const ArtworkCard = ({ artwork, onRegenerate, onConfigure, onRemove, onTo
 
   return html`
     <div
-      class="border border-border bg-bg ${isGenerating ? "opacity-80 cursor-loading" : ""}"
+      class="chronology-card workshop-artwork-card bg-bg ${isGenerating ? "opacity-80 cursor-loading" : ""}"
       data-artwork-id=${artwork.id}
     >
-      <div class="flex items-center justify-between p-4 border-b border-border">
+      <div class="chronology-card-header workshop-card-header">
         <div class="flex-1 min-w-0">
-          <h3 class="font-semibold text-sm truncate">${artwork.model}</h3>
+          <h3 class="font-semibold truncate">${artwork.model_name?.split(": ").slice(-1)[0] || artwork.model}</h3>
+          <span>${artwork.model_year || "n/a"}</span>
         </div>
-        <div class="flex items-center gap-1 ml-4">
+        <div class="flex items-center gap-1">
           <button
             class="w-8 h-8 flex items-center justify-center hover:bg-fg hover:text-bg transition-colors duration-200 ${artwork.featured ? 'text-yellow-500' : ''}"
             title="${artwork.featured ? 'Featured in Gallery' : 'Set as Featured'}"
@@ -154,7 +155,7 @@ export const ArtworkCard = ({ artwork, onRegenerate, onConfigure, onRemove, onTo
         </div>
       </div>
 
-      <div class="aspect-square relative bg-bg min-h-[200px]">
+      <div class="chronology-artwork">
         ${hasContent
           ? html` <${SVGDisplay} svgContent=${artwork.svg} /> `
           : html`
