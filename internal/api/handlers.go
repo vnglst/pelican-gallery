@@ -2,7 +2,9 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,6 +19,22 @@ import (
 	"pelican-gallery/internal/database"
 	"pelican-gallery/internal/models"
 )
+
+const defaultGenerationTimeout = 10 * time.Minute
+
+func generationTimeoutMessage() string {
+	timeout := generationTimeout()
+	limit := timeout.String()
+	if timeout%time.Minute == 0 {
+		minutes := int(timeout / time.Minute)
+		unit := "minutes"
+		if minutes == 1 {
+			unit = "minute"
+		}
+		limit = fmt.Sprintf("%d %s", minutes, unit)
+	}
+	return fmt.Sprintf("Generation was stopped after %s while waiting for the AI provider. The model may be busy or producing a long response; please retry or choose a faster model.", limit)
+}
 
 // Handler contains the API handlers
 type Handler struct {
@@ -126,9 +144,13 @@ func (h *Handler) GenerateHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Generate SVG request: model=%s, prompt length=%d", req.Model, len(req.Prompt))
 
-	svg, err := h.generateSVG(req.Prompt, req.Model, req.Temperature, req.MaxTokens)
+	svg, usage, err := h.generateSVG(r.Context(), req.Prompt, req.Model, req.Temperature, req.MaxTokens)
 	if err != nil {
 		log.Printf("Error generating SVG: %v", err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			writeJSONError(w, http.StatusGatewayTimeout, generationTimeoutMessage())
+			return
+		}
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -136,17 +158,19 @@ func (h *Handler) GenerateHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Successfully generated SVG with length: %d characters", len(svg))
 
 	resp := models.GenerateResponse{
-		SVG: svg,
+		SVG:   svg,
+		Usage: usage,
 	}
 
 	writeJSON(w, http.StatusOK, resp)
 }
 
 // generateSVG calls the OpenRouter API to generate SVG
-func (h *Handler) generateSVG(prompt, model string, temperature float64, maxTokens int) (string, error) {
+func (h *Handler) generateSVG(parentContext context.Context, prompt, model string, temperature float64, maxTokens int) (string, models.GenerationUsage, error) {
+	var usage models.GenerationUsage
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
 	if apiKey == "" {
-		return "", fmt.Errorf("OPENROUTER_API_KEY environment variable is not set")
+		return "", usage, fmt.Errorf("OPENROUTER_API_KEY environment variable is not set")
 	}
 
 	log.Printf("Calling OpenRouter API with model: %s", model)
@@ -196,26 +220,26 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 
 	jsonData, err := json.Marshal(openRouterReq)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return "", usage, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
+	requestContext, cancel := context.WithTimeout(parentContext, generationTimeout())
+	defer cancel()
+	req, err := http.NewRequestWithContext(requestContext, "POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
 
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return "", usage, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("X-Title", "Pelican Art Gallery")
 
-	client := &http.Client{
-		Timeout: 300 * time.Second, // 5 minutes
-	}
+	client := &http.Client{}
 	log.Printf("Making request to OpenRouter API...")
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to make request: %w", err)
+		return "", usage, fmt.Errorf("failed to make request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -223,36 +247,57 @@ func (h *Handler) generateSVG(prompt, model string, temperature float64, maxToke
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
+		return "", usage, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("OpenRouter API error (status %d): %s", resp.StatusCode, string(body))
-		return "", fmt.Errorf("OpenRouter API returned status %d: %s", resp.StatusCode, string(body))
+		return "", usage, fmt.Errorf("OpenRouter API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var openRouterResp models.OpenRouterResponse
 	if err := json.Unmarshal(body, &openRouterResp); err != nil {
 		log.Printf("Failed to parse OpenRouter response")
-		return "", fmt.Errorf("failed to parse response: %w", err)
+		return "", usage, fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if openRouterResp.Error != nil {
 		log.Printf("OpenRouter API error: %s", openRouterResp.Error.Message)
-		return "", fmt.Errorf("OpenRouter API error: %s", openRouterResp.Error.Message)
+		return "", usage, fmt.Errorf("OpenRouter API error: %s", openRouterResp.Error.Message)
 	}
 
 	if len(openRouterResp.Choices) == 0 {
 		log.Printf("No choices in OpenRouter response")
-		return "", fmt.Errorf("no response from OpenRouter API")
+		return "", usage, fmt.Errorf("no response from OpenRouter API")
 	}
 
 	log.Printf("Received %d choices from OpenRouter", len(openRouterResp.Choices))
 
 	svgContent := strings.TrimSpace(openRouterResp.Choices[0].Message.Content)
 	log.Printf("Raw OpenRouter response content length: %d", len(svgContent))
+	usage = models.GenerationUsage{
+		PromptTokens:     openRouterResp.Usage.PromptTokens,
+		CompletionTokens: openRouterResp.Usage.CompletionTokens,
+		TotalTokens:      openRouterResp.Usage.TotalTokens,
+		ReasoningTokens:  openRouterResp.Usage.CompletionDetails.ReasoningTokens,
+		CachedTokens:     openRouterResp.Usage.PromptDetails.CachedTokens,
+		CostUSD:          openRouterResp.Usage.Cost,
+	}
+	if rawUsage, marshalErr := json.Marshal(openRouterResp.Usage); marshalErr == nil {
+		usage.RawJSON = string(rawUsage)
+	}
+	log.Printf("OpenRouter usage: prompt=%d completion=%d total=%d cost=$%.6f", usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, usage.CostUSD)
 
-	return svgContent, nil
+	return svgContent, usage, nil
+}
+
+func generationTimeout() time.Duration {
+	if raw := os.Getenv("OPENROUTER_TIMEOUT_SECONDS"); raw != "" {
+		if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
+			return time.Duration(seconds) * time.Second
+		}
+	}
+	return defaultGenerationTimeout
 }
 
 // DeleteArtworkHandler handles artwork deletion requests
@@ -493,6 +538,25 @@ func (h *Handler) CreateArtworkHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
+	if modelInfo, ok := config.GetModelInfo(strings.TrimSuffix(strings.ToLower(req.Model), ":free")); ok {
+		artwork.ModelName = modelInfo.Name
+		artwork.ModelCreatedAt = modelInfo.Created
+		artwork.ModelMetadata = modelInfo.MetadataJSON
+		artwork.ModelYear = time.Unix(modelInfo.Created, 0).UTC().Year()
+		artwork.ModelSortTime = modelInfo.Created
+		if config.IsOpenSourceModel(req.Model, modelInfo.MetadataJSON) {
+			artwork.ModelProvider = "open-source"
+		}
+	}
+	if artwork.ModelProvider == "" && config.IsOpenSourceModel(req.Model, artwork.ModelMetadata) {
+		artwork.ModelProvider = "open-source"
+	}
+	if artwork.ModelProvider == "" {
+		provider, _, _ := strings.Cut(strings.ToLower(req.Model), "/")
+		if provider == "openai" || provider == "google" || provider == "anthropic" {
+			artwork.ModelProvider = provider
+		}
+	}
 
 	id, err := h.db.CreateArtwork(artwork)
 	if err != nil {
@@ -586,16 +650,20 @@ func (h *Handler) GenerateArtworkHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	svg, err := h.generateSVG(group.Prompt, artwork.Model, artwork.Temperature, artwork.MaxTokens)
+	svg, usage, err := h.generateSVG(r.Context(), group.Prompt, artwork.Model, artwork.Temperature, artwork.MaxTokens)
 	if err != nil {
 		log.Printf("Error generating SVG for artwork %d: %v", req.ArtworkID, err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			writeJSONError(w, http.StatusGatewayTimeout, generationTimeoutMessage())
+			return
+		}
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	log.Printf("Generated SVG for artwork %d: length=%d characters", req.ArtworkID, len(svg))
 
-	if err := h.db.SaveArtworkSVG(req.ArtworkID, svg); err != nil {
+	if err := h.db.SaveArtworkGeneration(req.ArtworkID, svg, usage); err != nil {
 		log.Printf("Error saving SVG (artwork=%d): %v", req.ArtworkID, err)
 		writeJSONError(w, http.StatusInternalServerError, "Failed to save SVG")
 		return
@@ -604,11 +672,13 @@ func (h *Handler) GenerateArtworkHandler(w http.ResponseWriter, r *http.Request)
 	log.Printf("Successfully saved SVG for artwork %d to database", req.ArtworkID)
 
 	response := struct {
-		ID  int    `json:"id"`
-		SVG string `json:"svg"`
+		ID    int                    `json:"id"`
+		SVG   string                 `json:"svg"`
+		Usage models.GenerationUsage `json:"usage"`
 	}{
-		ID:  req.ArtworkID,
-		SVG: svg,
+		ID:    req.ArtworkID,
+		SVG:   svg,
+		Usage: usage,
 	}
 
 	writeJSON(w, http.StatusOK, response)

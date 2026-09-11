@@ -31,15 +31,23 @@ type ArtworkGroup struct {
 
 // Artwork represents an individual artwork within a group
 type Artwork struct {
-	ID          int       `db:"id" json:"id"`
-	GroupID     int       `db:"group_id" json:"group_id"`
-	Model       string    `db:"model" json:"model"`
-	Temperature float64   `db:"temperature" json:"temperature"`
-	MaxTokens   int       `db:"max_tokens" json:"max_tokens"`
-	SVG         string    `db:"svg" json:"svg"`
-	Featured    bool      `db:"featured" json:"featured"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	ID                int       `db:"id" json:"id"`
+	GroupID           int       `db:"group_id" json:"group_id"`
+	Model             string    `db:"model" json:"model"`
+	ModelName         string    `db:"model_name" json:"model_name"`
+	ModelCreatedAt    int64     `db:"model_created_at" json:"model_created_at"`
+	ModelMetadata     string    `db:"model_metadata_json" json:"-"`
+	ModelProvider     string    `db:"-" json:"model_provider,omitempty"`
+	ModelYear         int       `db:"-" json:"model_year,omitempty"`
+	ModelSortTime     int64     `db:"-" json:"model_sort_time,omitempty"`
+	GenerationCostUSD float64   `db:"-" json:"generation_cost_usd"`
+	HasGenerationCost bool      `db:"-" json:"has_generation_cost"`
+	Temperature       float64   `db:"temperature" json:"temperature"`
+	MaxTokens         int       `db:"max_tokens" json:"max_tokens"`
+	SVG               string    `db:"svg" json:"svg"`
+	Featured          bool      `db:"featured" json:"featured"`
+	CreatedAt         time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Params represents the parameters for an artwork
@@ -60,8 +68,20 @@ type GenerateRequest struct {
 
 // GenerateResponse represents the response with generated SVG
 type GenerateResponse struct {
-	SVG   string `json:"svg"`
-	Error string `json:"error,omitempty"`
+	SVG   string          `json:"svg"`
+	Usage GenerationUsage `json:"usage"`
+	Error string          `json:"error,omitempty"`
+}
+
+// GenerationUsage is the billable usage reported by OpenRouter for one generation.
+type GenerationUsage struct {
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	TotalTokens      int     `json:"total_tokens"`
+	ReasoningTokens  int     `json:"reasoning_tokens"`
+	CachedTokens     int     `json:"cached_tokens"`
+	CostUSD          float64 `json:"cost_usd"`
+	RawJSON          string  `json:"-"`
 }
 
 // SaveArtworkRequest represents the request for saving an artwork
@@ -86,6 +106,10 @@ type SaveArtworkResponse struct {
 type ModelInfo struct {
 	ID                  string  `json:"id"`
 	Name                string  `json:"name"`
+	Created             int64   `json:"created,omitempty"`
+	HuggingFaceID       string  `json:"hugging_face_id,omitempty"`
+	Description         string  `json:"description,omitempty"`
+	MetadataJSON        string  `json:"-"`
 	Checked             bool    `json:"checked"`
 	Cost                float64 `json:"cost"` // Cost per 1M output tokens in dollars
 	ContextLength       int     `json:"context_length,omitempty"`
@@ -131,7 +155,21 @@ type Message struct {
 // OpenRouterResponse represents the response from OpenRouter API
 type OpenRouterResponse struct {
 	Choices []Choice         `json:"choices"`
+	Usage   OpenRouterUsage  `json:"usage"`
 	Error   *OpenRouterError `json:"error,omitempty"`
+}
+
+type OpenRouterUsage struct {
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	TotalTokens      int     `json:"total_tokens"`
+	Cost             float64 `json:"cost"`
+	PromptDetails    struct {
+		CachedTokens int `json:"cached_tokens"`
+	} `json:"prompt_tokens_details"`
+	CompletionDetails struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"completion_tokens_details"`
 }
 
 // Choice represents a choice in the OpenRouter response

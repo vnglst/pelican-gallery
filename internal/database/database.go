@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"pelican-gallery/internal/models"
 
@@ -59,6 +60,9 @@ func (db *DB) CreateTables() error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		group_id INTEGER NOT NULL,
 		model TEXT NOT NULL,
+		model_name TEXT NOT NULL DEFAULT '',
+		model_created_at INTEGER NOT NULL DEFAULT 0,
+		model_metadata_json TEXT NOT NULL DEFAULT '',
 		temperature REAL NOT NULL DEFAULT 0.0,
 		max_tokens INTEGER NOT NULL DEFAULT 0,
 		svg TEXT DEFAULT '',
@@ -71,6 +75,21 @@ func (db *DB) CreateTables() error {
 	CREATE INDEX IF NOT EXISTS idx_artworks_group_id ON artworks(group_id);
 	CREATE INDEX IF NOT EXISTS idx_artwork_groups_created_at ON artwork_groups(created_at);
 	CREATE INDEX IF NOT EXISTS idx_artworks_created_at ON artworks(created_at);
+
+	CREATE TABLE IF NOT EXISTS artwork_generations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		artwork_id INTEGER NOT NULL,
+		prompt_tokens INTEGER NOT NULL DEFAULT 0,
+		completion_tokens INTEGER NOT NULL DEFAULT 0,
+		total_tokens INTEGER NOT NULL DEFAULT 0,
+		reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+		cached_tokens INTEGER NOT NULL DEFAULT 0,
+		cost_usd REAL NOT NULL DEFAULT 0,
+		usage_json TEXT NOT NULL DEFAULT '',
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (artwork_id) REFERENCES artworks(id) ON DELETE CASCADE
+	);
+	CREATE INDEX IF NOT EXISTS idx_artwork_generations_artwork_id ON artwork_generations(artwork_id);
 	`
 
 	_, err = db.conn.Exec(createTableSQL)
@@ -78,6 +97,58 @@ func (db *DB) CreateTables() error {
 		return fmt.Errorf("failed to create tables: %w", err)
 	}
 
+	if err := db.ensureArtworkMetadataColumns(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (db *DB) artworkColumnExists(column string) (bool, error) {
+	rows, err := db.conn.Query("PRAGMA table_info(artworks)")
+	if err != nil {
+		return false, fmt.Errorf("failed to inspect artworks schema: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, columnType string
+		var defaultValue interface{}
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			return false, fmt.Errorf("failed to inspect artworks column: %w", err)
+		}
+		if name == column {
+			return true, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return false, fmt.Errorf("failed to inspect artworks schema: %w", err)
+	}
+	return false, nil
+}
+
+func (db *DB) ensureArtworkMetadataColumns() error {
+	columns := []struct {
+		name       string
+		definition string
+	}{
+		{"model_name", "TEXT NOT NULL DEFAULT ''"},
+		{"model_created_at", "INTEGER NOT NULL DEFAULT 0"},
+		{"model_metadata_json", "TEXT NOT NULL DEFAULT ''"},
+	}
+	for _, column := range columns {
+		exists, err := db.artworkColumnExists(column.name)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		if _, err := db.conn.Exec("ALTER TABLE artworks ADD COLUMN " + column.name + " " + column.definition); err != nil {
+			return fmt.Errorf("failed to add artworks.%s: %w", column.name, err)
+		}
+	}
 	return nil
 }
 
@@ -201,11 +272,11 @@ func (db *DB) ListGroups() ([]models.ArtworkGroup, error) {
 // CreateArtwork creates a new artwork
 func (db *DB) CreateArtwork(artwork models.Artwork) (int, error) {
 	query := `
-	INSERT INTO artworks (group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	INSERT INTO artworks (group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.Featured, artwork.CreatedAt, artwork.UpdatedAt)
+	result, err := db.conn.Exec(query, artwork.GroupID, artwork.Model, artwork.ModelName, artwork.ModelCreatedAt, artwork.ModelMetadata, artwork.Temperature, artwork.MaxTokens, artwork.SVG, artwork.Featured, artwork.CreatedAt, artwork.UpdatedAt)
 	if err != nil {
 		return 0, fmt.Errorf("failed to create artwork: %w", err)
 	}
@@ -218,10 +289,75 @@ func (db *DB) CreateArtwork(artwork models.Artwork) (int, error) {
 	return int(id), nil
 }
 
+// BackfillArtworkModelMetadata enriches legacy artwork rows from a model catalog.
+// Existing values are preserved so metadata survives removal from the catalog.
+func (db *DB) BackfillArtworkModelMetadata(modelInfos []models.ModelInfo) (int64, error) {
+	byID := make(map[string]models.ModelInfo, len(modelInfos))
+	for _, info := range modelInfos {
+		byID[strings.ToLower(info.ID)] = info
+	}
+
+	rows, err := db.conn.Query(`
+		SELECT DISTINCT model FROM artworks
+		WHERE model_name = '' OR model_created_at = 0 OR model_metadata_json = ''
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("failed to list artwork models for metadata backfill: %w", err)
+	}
+	var modelIDs []string
+	for rows.Next() {
+		var modelID string
+		if err := rows.Scan(&modelID); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("failed to scan artwork model for metadata backfill: %w", err)
+		}
+		modelIDs = append(modelIDs, modelID)
+	}
+	if err := rows.Close(); err != nil {
+		return 0, err
+	}
+
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin model metadata backfill: %w", err)
+	}
+	defer tx.Rollback()
+
+	var updated int64
+	for _, modelID := range modelIDs {
+		lookupID := strings.TrimSuffix(strings.ToLower(modelID), ":free")
+		info, ok := byID[lookupID]
+		if !ok {
+			continue
+		}
+		result, err := tx.Exec(`
+			UPDATE artworks
+			SET model_name = CASE WHEN model_name = '' THEN ? ELSE model_name END,
+				model_created_at = CASE WHEN model_created_at = 0 THEN ? ELSE model_created_at END,
+				model_metadata_json = CASE WHEN model_metadata_json = '' THEN ? ELSE model_metadata_json END
+			WHERE model = ? AND (model_name = '' OR model_created_at = 0 OR model_metadata_json = '')
+		`, info.Name, info.Created, info.MetadataJSON, modelID)
+		if err != nil {
+			return 0, fmt.Errorf("failed to backfill metadata for %s: %w", modelID, err)
+		}
+		count, err := result.RowsAffected()
+		if err != nil {
+			return 0, err
+		}
+		updated += count
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit model metadata backfill: %w", err)
+	}
+	return updated, nil
+}
+
 // GetArtwork retrieves an artwork by ID
 func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+		COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+		EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 	FROM artworks
 	WHERE id = ?
 	`
@@ -231,12 +367,17 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 		&artwork.ID,
 		&artwork.GroupID,
 		&artwork.Model,
+		&artwork.ModelName,
+		&artwork.ModelCreatedAt,
+		&artwork.ModelMetadata,
 		&artwork.Temperature,
 		&artwork.MaxTokens,
 		&artwork.SVG,
 		&artwork.Featured,
 		&artwork.CreatedAt,
 		&artwork.UpdatedAt,
+		&artwork.GenerationCostUSD,
+		&artwork.HasGenerationCost,
 	)
 
 	if err != nil {
@@ -252,7 +393,9 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 // ListArtworksByGroup retrieves all artworks for a group
 func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+		COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+		EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 	FROM artworks
 	WHERE group_id = ?
 	ORDER BY model ASC
@@ -271,12 +414,17 @@ func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 			&artwork.ID,
 			&artwork.GroupID,
 			&artwork.Model,
+			&artwork.ModelName,
+			&artwork.ModelCreatedAt,
+			&artwork.ModelMetadata,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
 			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
+			&artwork.GenerationCostUSD,
+			&artwork.HasGenerationCost,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan artwork: %w", err)
@@ -315,6 +463,42 @@ func (db *DB) SaveArtworkSVG(id int, svg string) error {
 		return fmt.Errorf("artwork with ID %d not found", id)
 	}
 
+	return nil
+}
+
+// SaveArtworkGeneration atomically stores the generated SVG and its billable usage.
+// A separate row is retained for every regeneration so lifetime cost is auditable.
+func (db *DB) SaveArtworkGeneration(id int, svg string, usage models.GenerationUsage) error {
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin artwork generation save: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`UPDATE artworks SET svg = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, svg, id)
+	if err != nil {
+		return fmt.Errorf("failed to save artwork SVG: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get artwork rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("artwork with ID %d not found", id)
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO artwork_generations
+			(artwork_id, prompt_tokens, completion_tokens, total_tokens, reasoning_tokens, cached_tokens, cost_usd, usage_json)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, id, usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, usage.ReasoningTokens, usage.CachedTokens, usage.CostUSD, usage.RawJSON)
+	if err != nil {
+		return fmt.Errorf("failed to save artwork generation usage: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit artwork generation save: %w", err)
+	}
 	return nil
 }
 
@@ -487,7 +671,9 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 	}
 
 	artworkQuery := fmt.Sprintf(`
-	SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+		COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+		EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 	FROM artworks
 	WHERE group_id IN (%s)
 	ORDER BY group_id, model ASC
@@ -511,12 +697,17 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 			&artwork.ID,
 			&artwork.GroupID,
 			&artwork.Model,
+			&artwork.ModelName,
+			&artwork.ModelCreatedAt,
+			&artwork.ModelMetadata,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
 			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
+			&artwork.GenerationCostUSD,
+			&artwork.HasGenerationCost,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan artwork: %w", err)
@@ -601,7 +792,9 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 
 	// Get artworks for this group, filtered by the two models
 	artworkQuery := `
-		SELECT id, group_id, model, temperature, max_tokens, svg, featured, created_at, updated_at
+		SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+			COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+			EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 		FROM artworks
 		WHERE group_id = ? AND (model LIKE ? OR model LIKE ?)
 		ORDER BY CASE
@@ -624,12 +817,17 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 			&artwork.ID,
 			&artwork.GroupID,
 			&artwork.Model,
+			&artwork.ModelName,
+			&artwork.ModelCreatedAt,
+			&artwork.ModelMetadata,
 			&artwork.Temperature,
 			&artwork.MaxTokens,
 			&artwork.SVG,
 			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
+			&artwork.GenerationCostUSD,
+			&artwork.HasGenerationCost,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan artwork: %w", err)

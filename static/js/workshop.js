@@ -1,11 +1,61 @@
-import { html, render, useReducer, useEffect } from "https://esm.sh/htm/preact/standalone";
+import { html, render, useReducer, useEffect, useRef, useState } from "https://esm.sh/htm/preact/standalone";
 import api from "/static/js/modules/api.js";
 import { ToastContainer, LoadingOverlay, ArtworkCard } from "/static/js/modules/components.js";
 import { ModelModal, ConfigModal } from "/static/js/modules/modals.js";
 import { createInitialState, reducer } from "/static/js/modules/state.js";
 
+const providerOrder = ["openai", "google", "anthropic", "open-source"];
+const providerLabels = { openai: "OpenAI", google: "Google", anthropic: "Anthropic", "open-source": "Open source" };
+
+const versionParts = (model) => (String(model).match(/\d+/g) || []).map(Number);
+const capabilityRank = (model) => {
+  const id = String(model).toLowerCase();
+  if (id.includes("nano") || id.includes("haiku")) return 0;
+  if (id.includes("mini") || id.includes("lite") || id.includes("flash")) return 1;
+  if (id.includes("opus")) return 4;
+  if (id.includes("pro")) return 3;
+  return 2;
+};
+const isSameModelGeneration = (left, right) => {
+  const a = versionParts(left.model);
+  const b = versionParts(right.model);
+  return a.length > 0 && a.length === b.length && a.every((part, index) => part === b[index]);
+};
+const compareVersions = (left, right) => {
+  const a = versionParts(left.model);
+  const b = versionParts(right.model);
+  for (let index = 0; index < Math.min(a.length, b.length); index += 1) {
+    if (a[index] !== b[index]) return a[index] - b[index];
+  }
+  if (a.length !== b.length) return a.length - b.length;
+  return String(left.model).localeCompare(String(right.model));
+};
+
+const compareChronology = (left, right) => {
+  if (isSameModelGeneration(left, right)) {
+    const capabilityDifference = capabilityRank(left.model) - capabilityRank(right.model);
+    if (capabilityDifference !== 0) return capabilityDifference;
+  }
+  if (left.model_sort_time && right.model_sort_time && left.model_sort_time !== right.model_sort_time) {
+    return left.model_sort_time - right.model_sort_time;
+  }
+  if (left.model_sort_time && left.model_sort_time === right.model_sort_time) {
+    const capabilityDifference = capabilityRank(left.model) - capabilityRank(right.model);
+    if (capabilityDifference !== 0) return capabilityDifference;
+  }
+  return compareVersions(left, right);
+};
+
 const WorkshopApp = () => {
   const [state, dispatch] = useReducer(reducer, createInitialState(window));
+  const [activeProvider, setActiveProvider] = useState("openai");
+  const chronologyRef = useRef(null);
+
+  const scrollChronology = (direction) => {
+    const chronology = chronologyRef.current;
+    if (!chronology) return;
+    chronology.scrollBy({ left: direction * Math.max(240, chronology.clientWidth * 0.75), behavior: "smooth" });
+  };
 
   const showToast = (message, type = "info") => dispatch({ type: "PUSH_TOAST", payload: { message, type } });
   const removeToast = (index) => dispatch({ type: "REMOVE_TOAST", payload: index });
@@ -277,7 +327,12 @@ const WorkshopApp = () => {
 
     try {
       const result = await api.generateArtwork(numericId);
-      const updatedArtwork = { ...artwork, svg: result.svg };
+      const updatedArtwork = {
+        ...artwork,
+        svg: result.svg,
+        generation_cost_usd: result.usage?.cost_usd || 0,
+        has_generation_cost: !!result.usage,
+      };
       dispatch({ type: "UPDATE_ARTWORK", payload: updatedArtwork });
       showToast("Artwork generated", "success");
     } catch (error) {
@@ -294,7 +349,7 @@ const WorkshopApp = () => {
         temperature: params.temperature,
         max_tokens: params.max_tokens,
       });
-      dispatch({ type: "UPDATE_ARTWORK", payload: updated });
+      dispatch({ type: "UPDATE_ARTWORK", payload: { ...state.artworks.get(Number(artworkId)), ...updated } });
       showToast("Parameters updated", "success");
     } catch (error) {
       showToast("Failed to update parameters: " + error.message, "error");
@@ -374,33 +429,47 @@ const WorkshopApp = () => {
 
   // Form values
   const isEditing = !!state.currentGroup?.id;
+  const artworkList = Array.from(state.artworks.values());
+  const providerCounts = Object.fromEntries(
+    providerOrder.map((provider) => [provider, artworkList.filter((artwork) => artwork.model_provider === provider).length])
+  );
+  const visibleProviders = providerOrder.filter((provider) => providerCounts[provider] > 0);
+  const selectedProvider = providerCounts[activeProvider] > 0 ? activeProvider : visibleProviders[0];
+  const chronologicalArtworks = artworkList
+    .filter((artwork) => artwork.model_provider === selectedProvider)
+    .sort(compareChronology);
 
   return html`
     <div>
-      <!-- Group Form -->
-      <div class="lg:grid lg:grid-cols-3 lg:gap-8 space-y-8 lg:space-y-0">
-        <div class="space-y-6">
-          <div class="space-y-6">
-            <div class="space-y-2">
+      <div class="flex flex-col gap-8">
+        <!-- Group Form -->
+        <details class="order-2 w-full max-w-5xl mx-auto border-t border-border pt-3" open=${!isEditing}>
+          <summary class="cursor-pointer select-none text-sm font-semibold py-2">
+            Artwork details
+            <span class="ml-2 font-normal text-fg/55">${state.formData.title || "Untitled artwork"}</span>
+          </summary>
+          <div class="workshop-details-grid pt-3">
+            <div class="space-y-3">
+            <div class="space-y-1.5">
               <label for="prompt-input" class="block text-sm font-medium">Describe your artwork</label>
               <textarea
                 id="prompt-input"
-                class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg resize-none"
+                class="w-full px-3 py-2.5 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg resize-none"
                 placeholder="A serene mountain landscape with geometric patterns, flowing rivers, and abstract shapes in harmonious colors..."
-                rows="6"
+                rows="3"
                 value=${state.formData.prompt}
                 onInput=${(e) =>
                   dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, prompt: e.target.value } })}
               ></textarea>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="space-y-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1.5">
                 <label for="title-input" class="block text-sm font-medium">Title</label>
                 <input
                   type="text"
                   id="title-input"
-                  class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
                   placeholder="Mountain Landscape"
                   title="Enter a descriptive title for your artwork group"
                   value=${state.formData.title}
@@ -409,12 +478,12 @@ const WorkshopApp = () => {
                 />
               </div>
 
-              <div class="space-y-2">
+              <div class="space-y-1.5">
                 <label for="category-input" class="block text-sm font-medium">Category</label>
                 <input
                   type="text"
                   id="category-input"
-                  class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
                   placeholder="abstract, nature, geometric, etc."
                   value=${state.formData.category}
                   onInput=${(e) =>
@@ -423,70 +492,37 @@ const WorkshopApp = () => {
               </div>
             </div>
 
-            <div class="space-y-2">
-              <label for="original-url-input" class="block text-sm font-medium">Original Artwork URL</label>
-              <input
-                type="url"
-                id="original-url-input"
-                class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
-                placeholder="https://example.com/original-artwork.jpg"
-                value=${state.formData.original_url || ""}
-                onInput=${(e) =>
-                  dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, original_url: e.target.value } })}
-              />
-            </div>
-
-            <div class="space-y-2">
-              <label for="artist-name-input" class="block text-sm font-medium">Artist Name</label>
-              <input
-                type="text"
-                id="artist-name-input"
-                class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
-                placeholder="Jane Doe"
-                value=${state.formData.artist_name || ""}
-                onInput=${(e) =>
-                  dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, artist_name: e.target.value } })}
-              />
-            </div>
-
-            <div class="space-y-2">
-              <label for="original-artwork-input" class="block text-sm font-medium">Original Artwork</label>
-              <div class="space-y-2">
-                ${state.currentGroup?.id &&
-                state.originalArtworkUploaded > 0 &&
-                !state.selectedFile &&
-                html`
-                  <img
-                    key=${state.originalArtworkUploaded}
-                    src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}"
-                    alt="Original artwork"
-                    class="max-w-full h-auto border border-border"
-                  />
-                `}
-                ${state.selectedFile &&
-                html`
-                  <div class="text-sm text-fg/70">
-                    Selected: ${state.selectedFile.name} (${Math.round(state.selectedFile.size / 1024)}KB)
-                  </div>
-                `}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1.5">
+                <label for="original-url-input" class="block text-sm font-medium">Original artwork URL</label>
                 <input
-                  type="file"
-                  id="original-artwork-input"
-                  accept="image/*"
-                  class="w-full p-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
-                  onChange=${handleFileSelect}
+                  type="url"
+                  id="original-url-input"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  placeholder="https://example.com/artwork.jpg"
+                  value=${state.formData.original_url || ""}
+                  onInput=${(e) =>
+                    dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, original_url: e.target.value } })}
                 />
-                <p class="text-xs text-fg/70">
-                  ${isEditing
-                    ? "Upload an image file (JPEG, PNG, GIF, WebP). Click 'Update Group' to save."
-                    : "Upload an image file (JPEG, PNG, GIF, WebP). Click 'Save Group' to save."}
-                </p>
+              </div>
+
+              <div class="space-y-1.5">
+                <label for="artist-name-input" class="block text-sm font-medium">Artist name</label>
+                <input
+                  type="text"
+                  id="artist-name-input"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  placeholder="Jane Doe"
+                  value=${state.formData.artist_name || ""}
+                  onInput=${(e) =>
+                    dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, artist_name: e.target.value } })}
+                />
               </div>
             </div>
 
             <div class="flex items-center gap-3">
               <button
-                class="px-6 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
+                class="px-4 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
                 onClick=${saveGroup}
               >
                 ${isEditing ? "Update Group" : "Save Group"}
@@ -501,39 +537,106 @@ const WorkshopApp = () => {
                 </button>
               `}
             </div>
-          </div>
-        </div>
+            </div>
 
-        <div class="lg:col-span-2 space-y-6">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            ${Array.from(state.artworks.entries()).map(
-              ([id, artwork]) =>
+            <div class="workshop-original-panel space-y-1.5">
+              <label for="original-artwork-input" class="block text-sm font-medium">Original artwork</label>
+              <div class="space-y-1.5">
+                ${state.currentGroup?.id &&
+                state.originalArtworkUploaded > 0 &&
+                !state.selectedFile &&
+                html`
+                  <img
+                    key=${state.originalArtworkUploaded}
+                    src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}"
+                    alt="Original artwork"
+                    class="workshop-original-preview"
+                  />
+                `}
+                ${state.selectedFile &&
+                html`
+                  <div class="text-sm text-fg/70">
+                    Selected: ${state.selectedFile.name} (${Math.round(state.selectedFile.size / 1024)}KB)
+                  </div>
+                `}
+                <input
+                  type="file"
+                  id="original-artwork-input"
+                  accept="image/*"
+                  class="w-full px-2 py-1.5 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  onChange=${handleFileSelect}
+                />
+                <p class="text-xs text-fg/70">
+                  ${isEditing
+                    ? "Upload an image file (JPEG, PNG, GIF, WebP). Click 'Update Group' to save."
+                    : "Upload an image file (JPEG, PNG, GIF, WebP). Click 'Save Group' to save."}
+                </p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="order-1 min-w-0 space-y-5">
+          <div class="relative flex w-full min-w-0 flex-col items-center gap-3">
+            <div class="provider-tabs scrollbar-hide !m-0" aria-label="Model provider">
+              ${visibleProviders.map(
+                (provider) => html`
+                  <button
+                    class="provider-tab"
+                    aria-current=${selectedProvider === provider ? "page" : null}
+                    onClick=${() => setActiveProvider(provider)}
+                  >${providerLabels[provider]} <span>${providerCounts[provider]}</span></button>
+                `
+              )}
+            </div>
+            <div class="flex self-center sm:absolute sm:right-0 sm:top-0">
+              <button
+                class="w-9 h-9 border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-colors"
+                aria-label="Show previous models"
+                title="Previous models"
+                onClick=${() => scrollChronology(-1)}
+              >←</button>
+              <button
+                class="w-9 h-9 -ml-px border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-colors"
+                aria-label="Show next models"
+                title="Next models"
+                onClick=${() => scrollChronology(1)}
+              >→</button>
+              <button
+                class="h-9 -ml-px shrink-0 px-3 border border-border hover:bg-fg hover:text-bg transition-colors text-sm font-medium"
+                onClick=${handleAddModel}
+              >+ Add model</button>
+            </div>
+          </div>
+
+          <div ref=${chronologyRef} class="chronology workshop-chronology scrollbar-hide" aria-label="Model chronology">
+            ${chronologicalArtworks.map(
+              (artwork) =>
                 html`
                   <${ArtworkCard}
-                    key=${id}
+                    key=${artwork.id}
                     artwork=${artwork}
                     onRegenerate=${generateArtwork}
                     onConfigure=${handleConfigure}
                     onRemove=${removeArtwork}
                     onToggleFeatured=${toggleFeatured}
-                    isGenerating=${state.generatingArtworks.has(Number(id))}
+                    isGenerating=${state.generatingArtworks.has(Number(artwork.id))}
                   />
                 `
             )}
-            <!-- Add Model Card -->
-            <div class="border border-border p-8 text-center space-y-6">
-              <h3 class="font-semibold mt-auto">Add AI Model</h3>
-              <p class="text-sm text-fg/70">Select AI models to generate artwork variations</p>
-              <button
-                class="w-full px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors duration-200 text-sm font-medium flex items-center justify-center gap-2"
-                onClick=${handleAddModel}
-              >
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-                Add Model
-              </button>
-            </div>
+            ${state.currentGroup?.id && state.originalArtworkUploaded > 0 && html`
+              <div class="chronology-original">
+                <figure class="chronology-card workshop-original-card">
+                  <figcaption class="chronology-card-header chronology-card-header-original">
+                    <strong>Original</strong>
+                    <span>${state.formData.artist_name || "Source artwork"}</span>
+                  </figcaption>
+                  <div class="chronology-artwork">
+                    <img src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}" alt="Original artwork" />
+                  </div>
+                </figure>
+              </div>
+            `}
           </div>
         </div>
       </div>

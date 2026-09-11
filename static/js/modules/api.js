@@ -7,7 +7,12 @@ const withTimeout = (promise, ms = DEFAULT_TIMEOUT, signal) => {
   if (signal) return promise; // external AbortController handles cancel
   let timeoutId;
   const timeout = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(`Request timed out after ${ms}ms`)), ms);
+    const minutes = ms / 60_000;
+    const duration = Number.isInteger(minutes) ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${ms}ms`;
+    timeoutId = setTimeout(
+      () => reject(new Error(`The request exceeded the ${duration} time limit. The server may still be processing it; check its status before retrying.`)),
+      ms,
+    );
   });
   return Promise.race([promise.finally(() => clearTimeout(timeoutId)), timeout]);
 };
