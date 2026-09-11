@@ -8,6 +8,19 @@ const providerOrder = ["openai", "google", "anthropic", "open-source"];
 const providerLabels = { openai: "OpenAI", google: "Google", anthropic: "Anthropic", "open-source": "Open source" };
 
 const versionParts = (model) => (String(model).match(/\d+/g) || []).map(Number);
+const capabilityRank = (model) => {
+  const id = String(model).toLowerCase();
+  if (id.includes("nano") || id.includes("haiku")) return 0;
+  if (id.includes("mini") || id.includes("lite") || id.includes("flash")) return 1;
+  if (id.includes("opus")) return 4;
+  if (id.includes("pro")) return 3;
+  return 2;
+};
+const isSameModelGeneration = (left, right) => {
+  const a = versionParts(left.model);
+  const b = versionParts(right.model);
+  return a.length > 0 && a.length === b.length && a.every((part, index) => part === b[index]);
+};
 const compareVersions = (left, right) => {
   const a = versionParts(left.model);
   const b = versionParts(right.model);
@@ -19,8 +32,16 @@ const compareVersions = (left, right) => {
 };
 
 const compareChronology = (left, right) => {
+  if (isSameModelGeneration(left, right)) {
+    const capabilityDifference = capabilityRank(left.model) - capabilityRank(right.model);
+    if (capabilityDifference !== 0) return capabilityDifference;
+  }
   if (left.model_sort_time && right.model_sort_time && left.model_sort_time !== right.model_sort_time) {
     return left.model_sort_time - right.model_sort_time;
+  }
+  if (left.model_sort_time && left.model_sort_time === right.model_sort_time) {
+    const capabilityDifference = capabilityRank(left.model) - capabilityRank(right.model);
+    if (capabilityDifference !== 0) return capabilityDifference;
   }
   return compareVersions(left, right);
 };
@@ -306,7 +327,12 @@ const WorkshopApp = () => {
 
     try {
       const result = await api.generateArtwork(numericId);
-      const updatedArtwork = { ...artwork, svg: result.svg };
+      const updatedArtwork = {
+        ...artwork,
+        svg: result.svg,
+        generation_cost_usd: result.usage?.cost_usd || 0,
+        has_generation_cost: !!result.usage,
+      };
       dispatch({ type: "UPDATE_ARTWORK", payload: updatedArtwork });
       showToast("Artwork generated", "success");
     } catch (error) {
@@ -422,7 +448,8 @@ const WorkshopApp = () => {
             Artwork details
             <span class="ml-2 font-normal text-fg/55">${state.formData.title || "Untitled artwork"}</span>
           </summary>
-          <div class="space-y-3 pt-3">
+          <div class="workshop-details-grid pt-3">
+            <div class="space-y-3">
             <div class="space-y-1.5">
               <label for="prompt-input" class="block text-sm font-medium">Describe your artwork</label>
               <textarea
@@ -493,7 +520,26 @@ const WorkshopApp = () => {
               </div>
             </div>
 
-            <div class="space-y-1.5">
+            <div class="flex items-center gap-3">
+              <button
+                class="px-4 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
+                onClick=${saveGroup}
+              >
+                ${isEditing ? "Update Group" : "Save Group"}
+              </button>
+              ${isEditing &&
+              html`
+                <button
+                  class="px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors duration-200 text-sm font-medium"
+                  onClick=${deleteGroup}
+                >
+                  Delete Group
+                </button>
+              `}
+            </div>
+            </div>
+
+            <div class="workshop-original-panel space-y-1.5">
               <label for="original-artwork-input" class="block text-sm font-medium">Original artwork</label>
               <div class="space-y-1.5">
                 ${state.currentGroup?.id &&
@@ -504,7 +550,7 @@ const WorkshopApp = () => {
                     key=${state.originalArtworkUploaded}
                     src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}"
                     alt="Original artwork"
-                    class="w-full max-h-40 object-contain border border-border"
+                    class="workshop-original-preview"
                   />
                 `}
                 ${state.selectedFile &&
@@ -526,24 +572,6 @@ const WorkshopApp = () => {
                     : "Upload an image file (JPEG, PNG, GIF, WebP). Click 'Save Group' to save."}
                 </p>
               </div>
-            </div>
-
-            <div class="flex items-center gap-3">
-              <button
-                class="px-4 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
-                onClick=${saveGroup}
-              >
-                ${isEditing ? "Update Group" : "Save Group"}
-              </button>
-              ${isEditing &&
-              html`
-                <button
-                  class="px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors duration-200 text-sm font-medium"
-                  onClick=${deleteGroup}
-                >
-                  Delete Group
-                </button>
-              `}
             </div>
           </div>
         </details>

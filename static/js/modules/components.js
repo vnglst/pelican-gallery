@@ -93,6 +93,23 @@ export const LoadingOverlay = ({ message, visible }) => {
   `;
 };
 
+const modelIDDisplayName = (modelID = "") => {
+  const name = String(modelID).split("/").pop().replace(/:free$/, "");
+  return name.split(/[-_]+/).filter(Boolean).map((word) => {
+    if (word.toLowerCase() === "gpt") return "GPT";
+    if (word.toLowerCase() === "ai") return "AI";
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  }).join(" ");
+};
+
+const formatUSD = (cost) => {
+  if (cost <= 0) return "Free";
+  if (cost >= 0.01) return `$${cost.toFixed(2)}`;
+  if (cost >= 0.0001) return `$${cost.toFixed(4)}`;
+  if (cost >= 0.00001) return `$${cost.toFixed(5)}`;
+  return "<$0.00001";
+};
+
 // Artwork card component
 export const ArtworkCard = ({ artwork, onRegenerate, onConfigure, onRemove, onToggleFeatured, isGenerating }) => {
   const hasContent = artwork.svg !== "";
@@ -104,8 +121,11 @@ export const ArtworkCard = ({ artwork, onRegenerate, onConfigure, onRemove, onTo
     >
       <div class="chronology-card-header">
         <div class="flex-1 min-w-0">
-          <h3 class="font-semibold truncate">${artwork.model_name?.split(": ").slice(-1)[0] || artwork.model}</h3>
-          <span>${artwork.model_year || "n/a"}</span>
+          <h3 class="font-semibold truncate">${artwork.model_name?.split(": ").slice(-1)[0] || modelIDDisplayName(artwork.model)}</h3>
+          <span class="chronology-card-meta">
+            <span>${artwork.model_year || "n/a"}</span>
+            ${artwork.has_generation_cost ? html`<span class="chronology-cost">${formatUSD(artwork.generation_cost_usd)}</span>` : null}
+          </span>
         </div>
       </div>
 

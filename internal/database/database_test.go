@@ -174,4 +174,19 @@ func TestSaveArtworkGenerationPersistsUsageHistory(t *testing.T) {
 	if artwork.SVG != "<svg></svg>" {
 		t.Fatalf("SVG = %q", artwork.SVG)
 	}
+	if !artwork.HasGenerationCost || artwork.GenerationCostUSD != usage.CostUSD {
+		t.Fatalf("displayed generation cost = (%t, %f), want (true, %f)", artwork.HasGenerationCost, artwork.GenerationCostUSD, usage.CostUSD)
+	}
+
+	latestUsage := models.GenerationUsage{CostUSD: 0.0042}
+	if err := db.SaveArtworkGeneration(artworkID, "<svg>new</svg>", latestUsage); err != nil {
+		t.Fatal(err)
+	}
+	artwork, err = db.GetArtwork(artworkID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if artwork.GenerationCostUSD != latestUsage.CostUSD {
+		t.Fatalf("latest generation cost = %f, want %f", artwork.GenerationCostUSD, latestUsage.CostUSD)
+	}
 }

@@ -355,7 +355,9 @@ func (db *DB) BackfillArtworkModelMetadata(modelInfos []models.ModelInfo) (int64
 // GetArtwork retrieves an artwork by ID
 func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+		COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+		EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 	FROM artworks
 	WHERE id = ?
 	`
@@ -374,6 +376,8 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 		&artwork.Featured,
 		&artwork.CreatedAt,
 		&artwork.UpdatedAt,
+		&artwork.GenerationCostUSD,
+		&artwork.HasGenerationCost,
 	)
 
 	if err != nil {
@@ -389,7 +393,9 @@ func (db *DB) GetArtwork(id int) (*models.Artwork, error) {
 // ListArtworksByGroup retrieves all artworks for a group
 func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 	query := `
-	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+		COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+		EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 	FROM artworks
 	WHERE group_id = ?
 	ORDER BY model ASC
@@ -417,6 +423,8 @@ func (db *DB) ListArtworksByGroup(groupID int) ([]models.Artwork, error) {
 			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
+			&artwork.GenerationCostUSD,
+			&artwork.HasGenerationCost,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan artwork: %w", err)
@@ -663,7 +671,9 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 	}
 
 	artworkQuery := fmt.Sprintf(`
-	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
+	SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+		COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+		EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 	FROM artworks
 	WHERE group_id IN (%s)
 	ORDER BY group_id, model ASC
@@ -696,6 +706,8 @@ func (db *DB) ListGroupsWithArtworks(category string) ([]models.ArtworkGroup, ma
 			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
+			&artwork.GenerationCostUSD,
+			&artwork.HasGenerationCost,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan artwork: %w", err)
@@ -780,7 +792,9 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 
 	// Get artworks for this group, filtered by the two models
 	artworkQuery := `
-		SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at
+		SELECT id, group_id, model, model_name, model_created_at, model_metadata_json, temperature, max_tokens, svg, featured, created_at, updated_at,
+			COALESCE((SELECT cost_usd FROM artwork_generations WHERE artwork_id = artworks.id ORDER BY id DESC LIMIT 1), 0),
+			EXISTS(SELECT 1 FROM artwork_generations WHERE artwork_id = artworks.id)
 		FROM artworks
 		WHERE group_id = ? AND (model LIKE ? OR model LIKE ?)
 		ORDER BY CASE
@@ -812,6 +826,8 @@ func (db *DB) GetRandomGroupWithModelArtworks(model1, model2 string) (*models.Ar
 			&artwork.Featured,
 			&artwork.CreatedAt,
 			&artwork.UpdatedAt,
+			&artwork.GenerationCostUSD,
+			&artwork.HasGenerationCost,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan artwork: %w", err)

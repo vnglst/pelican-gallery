@@ -31,21 +31,23 @@ type ArtworkGroup struct {
 
 // Artwork represents an individual artwork within a group
 type Artwork struct {
-	ID             int       `db:"id" json:"id"`
-	GroupID        int       `db:"group_id" json:"group_id"`
-	Model          string    `db:"model" json:"model"`
-	ModelName      string    `db:"model_name" json:"model_name"`
-	ModelCreatedAt int64     `db:"model_created_at" json:"model_created_at"`
-	ModelMetadata  string    `db:"model_metadata_json" json:"-"`
-	ModelProvider  string    `db:"-" json:"model_provider,omitempty"`
-	ModelYear      int       `db:"-" json:"model_year,omitempty"`
-	ModelSortTime  int64     `db:"-" json:"model_sort_time,omitempty"`
-	Temperature    float64   `db:"temperature" json:"temperature"`
-	MaxTokens      int       `db:"max_tokens" json:"max_tokens"`
-	SVG            string    `db:"svg" json:"svg"`
-	Featured       bool      `db:"featured" json:"featured"`
-	CreatedAt      time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time `db:"updated_at" json:"updated_at"`
+	ID                int       `db:"id" json:"id"`
+	GroupID           int       `db:"group_id" json:"group_id"`
+	Model             string    `db:"model" json:"model"`
+	ModelName         string    `db:"model_name" json:"model_name"`
+	ModelCreatedAt    int64     `db:"model_created_at" json:"model_created_at"`
+	ModelMetadata     string    `db:"model_metadata_json" json:"-"`
+	ModelProvider     string    `db:"-" json:"model_provider,omitempty"`
+	ModelYear         int       `db:"-" json:"model_year,omitempty"`
+	ModelSortTime     int64     `db:"-" json:"model_sort_time,omitempty"`
+	GenerationCostUSD float64   `db:"-" json:"generation_cost_usd"`
+	HasGenerationCost bool      `db:"-" json:"has_generation_cost"`
+	Temperature       float64   `db:"temperature" json:"temperature"`
+	MaxTokens         int       `db:"max_tokens" json:"max_tokens"`
+	SVG               string    `db:"svg" json:"svg"`
+	Featured          bool      `db:"featured" json:"featured"`
+	CreatedAt         time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Params represents the parameters for an artwork

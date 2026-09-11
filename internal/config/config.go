@@ -181,6 +181,35 @@ func GetModelInfo(modelID string) (models.ModelInfo, bool) {
 	return models.ModelInfo{}, false
 }
 
+// IsOpenSourceModel classifies open-weight models even when OpenRouter no longer
+// returns metadata for an older model stored in the gallery.
+func IsOpenSourceModel(modelID, storedMetadata string) bool {
+	lookupID := strings.TrimSuffix(strings.ToLower(modelID), ":free")
+	if strings.HasPrefix(lookupID, "google/gemma-") || lookupID == "google/gemma" {
+		return true
+	}
+
+	var stored struct {
+		HuggingFaceID string `json:"hugging_face_id"`
+		Description   string `json:"description"`
+	}
+	if storedMetadata != "" && json.Unmarshal([]byte(storedMetadata), &stored) == nil &&
+		(stored.HuggingFaceID != "" || isOpenSourceDescription(stored.Description)) {
+		return true
+	}
+
+	if info, ok := GetModelInfo(lookupID); ok {
+		return info.HuggingFaceID != "" || isOpenSourceDescription(info.Description)
+	}
+	return false
+}
+
+func isOpenSourceDescription(description string) bool {
+	description = strings.ToLower(description)
+	return strings.Contains(description, "open-weight") || strings.Contains(description, "open weight") ||
+		strings.Contains(description, "open-source") || strings.Contains(description, "open source")
+}
+
 // parseFloat parses a string to float64
 func parseFloat(s string) (float64, error) {
 	if s == "" {

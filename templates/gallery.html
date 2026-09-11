@@ -53,48 +53,79 @@
 
       <main class="flex-1 w-full max-w-6xl mx-auto px-6 pb-12">
         {{if .Groups}}
-        <div class="py-16">
-          <div class="artwork-grid">
-            {{range .Groups}}
-              {{if .HasOriginalArtwork}}
-              <!-- Original Artwork -->
-              <div class="group relative">
-                <a href="/group/{{.ID}}" class="block aspect-square overflow-hidden flex items-center justify-center bg-bg">
-                  <img
-                    src="/api/groups/{{.ID}}/original-artwork"
-                    alt="Original {{.Title}}"
-                    class="w-full h-full object-contain"
-                  />
-                  <!-- Hover overlay at bottom -->
-                  <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4">
-                    <div class="text-center text-white">
-                      <h3 class="text-lg font-bold">{{.Title}}</h3>
-                      {{if .ArtistName}}<p class="text-sm">by {{.ArtistName}}</p>{{end}}
-                      <p class="text-sm">Original Artwork</p>
-                    </div>
+        <div class="gallery-studies">
+          {{range .Groups}}
+          <details id="group-{{.ID}}" class="gallery-study" data-gallery-study>
+            <summary class="gallery-study-summary">
+              <div class="gallery-study-preview" aria-hidden="true">
+                {{if .HasOriginalArtwork}}
+                <img src="/api/groups/{{.ID}}/original-artwork" alt="" />
+                {{else if .FeaturedSVG}}
+                {{template "frame" .FeaturedSVG}}
+                {{end}}
+              </div>
+              <div class="gallery-study-heading">
+                <h2>{{.Title}}</h2>
+                <p>{{if .ArtistName}}{{.ArtistName}} · {{end}}{{.ArtworkCount}} model results</p>
+              </div>
+              <span class="gallery-study-actions">
+                <span class="gallery-study-action"><span data-closed-label>View chronology</span><span data-open-label>Close</span></span>
+                {{if $.EditingEnabled}}
+                <a class="gallery-study-edit" data-gallery-edit href="/workshop?edit={{.ID}}" aria-label="Edit {{.Title}}">Edit</a>
+                {{end}}
+              </span>
+            </summary>
+
+            {{$group := .}}
+            <div class="gallery-study-body" data-chronology-scope>
+              <div class="gallery-study-navigation">
+                <nav class="provider-tabs scrollbar-hide !m-0" aria-label="{{.Title}} model providers">
+                  {{range $index, $provider := .Providers}}
+                  <button type="button" class="provider-tab" data-gallery-provider="{{$provider.ID}}" {{if eq $index 0}}aria-current="page"{{end}}>
+                    {{$provider.Label}} <span>{{len $provider.Artworks}}</span>
+                  </button>
+                  {{end}}
+                </nav>
+                <div class="chronology-controls" aria-label="Chronology navigation">
+                  <button type="button" data-chronology-scroll="previous" aria-label="Show previous models" title="Previous models">←</button>
+                  <button type="button" data-chronology-scroll="next" aria-label="Show next models" title="Next models">→</button>
+                </div>
+              </div>
+
+              {{range $index, $provider := .Providers}}
+              <div class="chronology gallery-study-chronology scrollbar-hide" data-chronology data-gallery-panel="{{$provider.ID}}" {{if ne $index 0}}hidden{{end}}>
+                {{range $provider.Artworks}}
+                <figure class="chronology-card group" data-model="{{.Model}}">
+                  <figcaption class="chronology-card-header">
+                    <strong>{{.DisplayName}}</strong>
+                    <span class="chronology-card-meta">
+                      {{if .HasReleaseDate}}<time datetime="{{.ReleasedAt.Format "2006-01-02"}}">{{.ReleasedAt.Year}}</time>{{else}}<span>n/a</span>{{end}}
+                      {{if .HasGenerationCost}}<span class="chronology-cost">{{.CostDisplay}}</span>{{end}}
+                    </span>
+                  </figcaption>
+                  <div class="chronology-artwork" data-artwork-media>
+                    {{template "frame" .SVGContent}}
                   </div>
-                </a>
+                </figure>
+                {{end}}
+                {{if $group.HasOriginalArtwork}}
+                <div class="chronology-original">
+                  <figure class="chronology-card">
+                    <figcaption class="chronology-card-header chronology-card-header-original">
+                      <strong>Original</strong>
+                      <span>{{if $group.ArtistName}}{{$group.ArtistName}}{{else}}Source artwork{{end}}</span>
+                    </figcaption>
+                    <div class="chronology-artwork" data-artwork-media>
+                      <img src="/api/groups/{{$group.ID}}/original-artwork" alt="Original {{$group.Title}}" />
+                    </div>
+                  </figure>
+                </div>
+                {{end}}
               </div>
               {{end}}
-              {{range .Artworks}}
-              <!-- GPT-5 Artwork -->
-              <div class="group relative">
-                <a href="/group/{{.GroupID}}" class="block aspect-square overflow-hidden flex items-center justify-center"
-                  data-artwork-id="{{.ID}}" data-model="{{.Model}}">
-                  {{template "frame" .SVGContent}}
-                  <!-- Hover overlay at bottom -->
-                  <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4">
-                    <div class="text-center text-white">
-                      <h3 class="text-lg font-bold">{{.Title}}</h3>
-                      {{if .ArtistName}}<p class="text-sm">by {{.ArtistName}}</p>{{end}}
-                      <p class="text-sm">{{modelName .Model}}</p>
-                    </div>
-                  </div>
-                </a>
-              </div>
-              {{end}}
-            {{end}}
-          </div>
+            </div>
+          </details>
+          {{end}}
         </div>
         {{else}}
         <section class="flex flex-col items-center justify-center text-center py-20 space-y-8" aria-labelledby="empty-state-title">
@@ -144,5 +175,8 @@
       </a>
       {{end}}
     </nav>
+    <script src="/static/js/chronology-scroll.js" defer></script>
+    <script src="/static/js/gallery-chronology.js" defer></script>
+    <script src="/static/js/artwork-lightbox.js" defer></script>
   </body>
 </html>

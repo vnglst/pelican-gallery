@@ -2,7 +2,6 @@ package pages
 
 import (
 	"crypto/md5"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -28,44 +27,59 @@ const (
 )
 
 var modelReleaseDates = map[string]time.Time{
-	"openai/gpt-3.5-turbo":      time.Date(2023, time.March, 1, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-4":              time.Date(2023, time.March, 14, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-3.5-turbo-0613": time.Date(2023, time.June, 13, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-4o":             time.Date(2024, time.May, 13, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-4o-mini":        time.Date(2024, time.July, 18, 0, 0, 0, 0, time.UTC),
-	"openai/o1":                 time.Date(2024, time.December, 5, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-4.1":            time.Date(2025, time.April, 14, 0, 0, 0, 0, time.UTC),
-	"openai/o3":                 time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
-	"openai/o4-mini":            time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
-	"openai/o4-mini-high":       time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-oss-120b":       time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-oss-20b":        time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-oss-20b:free":   time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-5":              time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-5-chat":         time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-5-mini":         time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-5-nano":         time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-5-codex":        time.Date(2025, time.September, 15, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-5.1":            time.Date(2025, time.November, 13, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-5.2":            time.Date(2025, time.December, 11, 0, 0, 0, 0, time.UTC),
-	"openai/gpt-6-astra-pro":    time.Date(2026, time.September, 3, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-3-haiku":    time.Date(2024, time.March, 13, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-3.5-haiku":  time.Date(2024, time.October, 22, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-3.7-sonnet": time.Date(2025, time.February, 24, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-sonnet-4":   time.Date(2025, time.May, 22, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-opus-4.1":   time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-sonnet-4.5": time.Date(2025, time.September, 29, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-opus-4.5":   time.Date(2025, time.November, 24, 0, 0, 0, 0, time.UTC),
+	"anthropic/claude-opus-4.6":   time.Date(2026, time.February, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-3.5-turbo":        time.Date(2023, time.March, 1, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4":                time.Date(2023, time.March, 14, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-3.5-turbo-0613":   time.Date(2023, time.June, 13, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4o":               time.Date(2024, time.May, 13, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4o-mini":          time.Date(2024, time.July, 18, 0, 0, 0, 0, time.UTC),
+	"openai/o1":                   time.Date(2024, time.December, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-4.1":              time.Date(2025, time.April, 14, 0, 0, 0, 0, time.UTC),
+	"openai/o3":                   time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
+	"openai/o4-mini":              time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
+	"openai/o4-mini-high":         time.Date(2025, time.April, 16, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-oss-120b":         time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-oss-20b":          time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-oss-20b:free":     time.Date(2025, time.August, 5, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5":                time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-chat":           time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-mini":           time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-nano":           time.Date(2025, time.August, 7, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5-codex":          time.Date(2025, time.September, 15, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5.1":              time.Date(2025, time.November, 13, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-5.2":              time.Date(2025, time.December, 11, 0, 0, 0, 0, time.UTC),
+	"openai/gpt-6-astra-pro":      time.Date(2026, time.September, 3, 0, 0, 0, 0, time.UTC),
 }
 
 var modelVersionPattern = regexp.MustCompile(`\d+`)
-var openSourceDescriptionPattern = regexp.MustCompile(`(?i)\bopen[- ](?:weight|weights|source)\b`)
+
+func modelCapabilityRank(model string) int {
+	model = strings.ToLower(model)
+	switch {
+	case strings.Contains(model, "nano"), strings.Contains(model, "haiku"):
+		return 0
+	case strings.Contains(model, "mini"), strings.Contains(model, "lite"), strings.Contains(model, "flash"):
+		return 1
+	case strings.Contains(model, "opus"):
+		return 4
+	case strings.Contains(model, "pro"):
+		return 3
+	case strings.Contains(model, "sonnet"):
+		return 2
+	default:
+		return 2
+	}
+}
 
 func modelProvider(model, storedMetadata string) string {
-	var stored struct {
-		HuggingFaceID string `json:"hugging_face_id"`
-		Description   string `json:"description"`
-	}
-	if storedMetadata != "" && json.Unmarshal([]byte(storedMetadata), &stored) == nil &&
-		(stored.HuggingFaceID != "" || openSourceDescriptionPattern.MatchString(stored.Description)) {
-		return FilterOpenSource
-	}
-
-	lookupID := strings.TrimSuffix(strings.ToLower(model), ":free")
-	if info, ok := config.GetModelInfo(lookupID); ok && (info.HuggingFaceID != "" || openSourceDescriptionPattern.MatchString(info.Description)) {
+	if config.IsOpenSourceModel(model, storedMetadata) {
 		return FilterOpenSource
 	}
 
@@ -119,9 +133,29 @@ func chronologyModelName(model string) string {
 	}
 	_, name, found := strings.Cut(model, "/")
 	if found {
-		return name
+		return modelIDDisplayName(name)
 	}
-	return model
+	return modelIDDisplayName(model)
+}
+
+func modelIDDisplayName(modelID string) string {
+	words := strings.FieldsFunc(strings.TrimSuffix(modelID, ":free"), func(r rune) bool {
+		return r == '-' || r == '_'
+	})
+	for i, word := range words {
+		lower := strings.ToLower(word)
+		switch lower {
+		case "gpt":
+			words[i] = "GPT"
+		case "ai":
+			words[i] = "AI"
+		default:
+			if len(word) > 0 {
+				words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+			}
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 func chronologyDisplayName(name string) string {
@@ -129,6 +163,22 @@ func chronologyDisplayName(name string) string {
 		return displayName
 	}
 	return name
+}
+
+func formatGenerationCost(cost float64) string {
+	if cost <= 0 {
+		return "Free"
+	}
+	if cost >= 0.01 {
+		return fmt.Sprintf("$%.2f", cost)
+	}
+	if cost >= 0.0001 {
+		return fmt.Sprintf("$%.4f", cost)
+	}
+	if cost >= 0.00001 {
+		return fmt.Sprintf("$%.5f", cost)
+	}
+	return "<$0.00001"
 }
 
 // TemplateParser is a function type for parsing templates
@@ -211,29 +261,36 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only show GPT-5 artwork alongside original
 	type GalleryArtwork struct {
 		models.Artwork
-		Title      string        `json:"title"`
-		Category   string        `json:"category"`
-		Prompt     string        `json:"prompt"`
-		ArtistName string        `json:"artist_name"`
-		SVGContent template.HTML `json:"svg_content"`
+		SVGContent     template.HTML `json:"svg_content"`
+		DisplayName    string
+		CostDisplay    string
+		ReleasedAt     time.Time
+		HasReleaseDate bool
+	}
+
+	type GalleryProvider struct {
+		ID       string
+		Label    string
+		Artworks []GalleryArtwork
 	}
 
 	type GalleryGroup struct {
 		models.ArtworkGroup
 		Artworks           []GalleryArtwork `json:"artworks"`
-		HasOriginalArtwork bool             `json:"has_original_artwork"`
+		Providers          []GalleryProvider
+		FeaturedSVG        template.HTML
+		FeaturedModel      string
+		ArtworkCount       int
+		HasOriginalArtwork bool `json:"has_original_artwork"`
 	}
 
 	var galleryGroups []GalleryGroup
 	var flatArtworks []GalleryArtwork
 	for _, group := range groups {
 		artworks := artworkMap[group.ID]
-		var filteredArtworks []GalleryArtwork
-
-		// Find featured artwork (or fallback to GPT-5)
+		var galleryArtworks []GalleryArtwork
 		var featuredArtwork *models.Artwork
 		var gpt5Artwork *models.Artwork
 
@@ -253,26 +310,71 @@ func (h *PageHandler) GalleryHandler(w http.ResponseWriter, r *http.Request) {
 			selectedArtwork = gpt5Artwork
 		}
 
-		if selectedArtwork != nil {
-			ga := GalleryArtwork{
-				Artwork:    *selectedArtwork,
-				Title:      group.Title,
-				Category:   group.Category,
-				Prompt:     group.Prompt,
-				ArtistName: group.ArtistName,
-				SVGContent: template.HTML(selectedArtwork.SVG),
+		for _, artwork := range artworks {
+			releasedAt, hasReleaseDate := modelReleaseDate(artwork.Model, artwork.ModelCreatedAt)
+			displayName := chronologyDisplayName(artwork.ModelName)
+			if displayName == "" {
+				displayName = chronologyModelName(artwork.Model)
 			}
-			filteredArtworks = append(filteredArtworks, ga)
-			flatArtworks = append(flatArtworks, ga)
+			galleryArtworks = append(galleryArtworks, GalleryArtwork{
+				Artwork: artwork, SVGContent: template.HTML(artwork.SVG), DisplayName: displayName,
+				CostDisplay: formatGenerationCost(artwork.GenerationCostUSD), ReleasedAt: releasedAt, HasReleaseDate: hasReleaseDate,
+			})
+		}
+		sort.SliceStable(galleryArtworks, func(i, j int) bool {
+			if galleryArtworks[i].HasReleaseDate && galleryArtworks[j].HasReleaseDate {
+				if !galleryArtworks[i].ReleasedAt.Equal(galleryArtworks[j].ReleasedAt) {
+					return galleryArtworks[i].ReleasedAt.Before(galleryArtworks[j].ReleasedAt)
+				}
+				if leftRank, rightRank := modelCapabilityRank(galleryArtworks[i].Model), modelCapabilityRank(galleryArtworks[j].Model); leftRank != rightRank {
+					return leftRank < rightRank
+				}
+			}
+			if galleryArtworks[i].HasReleaseDate != galleryArtworks[j].HasReleaseDate {
+				return galleryArtworks[i].HasReleaseDate
+			}
+			if galleryArtworks[i].Model != galleryArtworks[j].Model {
+				return modelVersionLess(galleryArtworks[i].Model, galleryArtworks[j].Model)
+			}
+			return galleryArtworks[i].ID < galleryArtworks[j].ID
+		})
+
+		providerLabels := map[string]string{FilterOpenAI: "OpenAI", FilterGoogle: "Google", FilterAnthropic: "Anthropic", FilterOpenSource: "Open source"}
+		var providers []GalleryProvider
+		for _, providerID := range []string{FilterOpenAI, FilterGoogle, FilterAnthropic, FilterOpenSource} {
+			provider := GalleryProvider{ID: providerID, Label: providerLabels[providerID]}
+			for _, artwork := range galleryArtworks {
+				if modelProvider(artwork.Model, artwork.ModelMetadata) == providerID {
+					provider.Artworks = append(provider.Artworks, artwork)
+				}
+			}
+			if len(provider.Artworks) > 0 {
+				providers = append(providers, provider)
+			}
+		}
+
+		var featuredSVG template.HTML
+		var featuredModel string
+		if selectedArtwork != nil {
+			featuredSVG = template.HTML(selectedArtwork.SVG)
+			featuredModel = chronologyDisplayName(selectedArtwork.ModelName)
+			if featuredModel == "" {
+				featuredModel = chronologyModelName(selectedArtwork.Model)
+			}
 		}
 
 		hasOriginalArtwork := len(group.OriginalArtwork) > 0
 
 		galleryGroups = append(galleryGroups, GalleryGroup{
 			ArtworkGroup:       group,
-			Artworks:           filteredArtworks,
+			Artworks:           galleryArtworks,
+			Providers:          providers,
+			FeaturedSVG:        featuredSVG,
+			FeaturedModel:      featuredModel,
+			ArtworkCount:       len(galleryArtworks),
 			HasOriginalArtwork: hasOriginalArtwork,
 		})
+		flatArtworks = append(flatArtworks, galleryArtworks...)
 	}
 
 	log.Printf("Fetched %d groups with artworks and %d categories for gallery", len(galleryGroups), len(categories))
@@ -488,6 +590,7 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 		models.Artwork
 		SVGContent     template.HTML
 		DisplayName    string
+		CostDisplay    string
 		ReleasedAt     time.Time
 		HasReleaseDate bool
 	}
@@ -506,13 +609,22 @@ func (h *PageHandler) ArtworkGroupHandler(w http.ResponseWriter, r *http.Request
 			Artwork:        artwork,
 			SVGContent:     template.HTML(artwork.SVG),
 			DisplayName:    displayName,
+			CostDisplay:    formatGenerationCost(artwork.GenerationCostUSD),
 			ReleasedAt:     releasedAt,
 			HasReleaseDate: hasReleaseDate,
 		})
 	}
 	sort.SliceStable(artList, func(i, j int) bool {
-		if artList[i].HasReleaseDate && artList[j].HasReleaseDate && !artList[i].ReleasedAt.Equal(artList[j].ReleasedAt) {
-			return artList[i].ReleasedAt.Before(artList[j].ReleasedAt)
+		if artList[i].HasReleaseDate && artList[j].HasReleaseDate {
+			if !artList[i].ReleasedAt.Equal(artList[j].ReleasedAt) {
+				return artList[i].ReleasedAt.Before(artList[j].ReleasedAt)
+			}
+			if leftRank, rightRank := modelCapabilityRank(artList[i].Model), modelCapabilityRank(artList[j].Model); leftRank != rightRank {
+				return leftRank < rightRank
+			}
+		}
+		if artList[i].HasReleaseDate != artList[j].HasReleaseDate {
+			return artList[i].HasReleaseDate
 		}
 		if artList[i].Model != artList[j].Model {
 			return modelVersionLess(artList[i].Model, artList[j].Model)

@@ -25,7 +25,7 @@
         </div>
       </div>
 
-      <main class="chronology-shell flex-1">
+      <main class="chronology-shell flex-1" data-chronology-scope>
         <div class="chronology-navigation">
         <nav class="provider-tabs scrollbar-hide !m-0" aria-label="Model provider">
           {{if gt (index .ProviderCounts "openai") 0}}
@@ -53,7 +53,10 @@
           <figure id="artwork-{{.ID}}" class="chronology-card group" data-model="{{.Model}}">
             <figcaption class="chronology-card-header">
               <strong>{{.DisplayName}}</strong>
-              {{if .HasReleaseDate}}<time datetime="{{.ReleasedAt.Format "2006-01-02"}}">{{.ReleasedAt.Year}}</time>{{else}}<span>n/a</span>{{end}}
+              <span class="chronology-card-meta">
+                {{if .HasReleaseDate}}<time datetime="{{.ReleasedAt.Format "2006-01-02"}}">{{.ReleasedAt.Year}}</time>{{else}}<span>n/a</span>{{end}}
+                {{if .HasGenerationCost}}<span class="chronology-cost">{{.CostDisplay}}</span>{{end}}
+              </span>
             </figcaption>
             <div class="chronology-artwork" data-artwork-media>
               {{template "frame" .SVGContent}}
@@ -89,5 +92,6 @@
     </div>
     <script src="/static/js/artwork-download.js" defer></script>
     <script src="/static/js/chronology-scroll.js" defer></script>
+    <script src="/static/js/artwork-lightbox.js" defer></script>
   </body>
 </html>
