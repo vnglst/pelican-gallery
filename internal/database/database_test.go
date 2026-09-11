@@ -127,3 +127,51 @@ func TestBackfillArtworkModelMetadataPreservesExistingValues(t *testing.T) {
 		t.Fatalf("metadata = (%q, %d, %q)", artwork.ModelName, artwork.ModelCreatedAt, artwork.ModelMetadata)
 	}
 }
+
+func TestSaveArtworkGenerationPersistsUsageHistory(t *testing.T) {
+	db, err := New(filepath.Join(t.TempDir(), "gallery.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	now := time.Now().UTC().Truncate(time.Second)
+	groupID, err := db.CreateGroup(models.ArtworkGroup{Title: "Test", Prompt: "Test", CreatedAt: now, UpdatedAt: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	artworkID, err := db.CreateArtwork(models.Artwork{GroupID: groupID, Model: "example/model", CreatedAt: now, UpdatedAt: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	usage := models.GenerationUsage{
+		PromptTokens: 120, CompletionTokens: 340, TotalTokens: 460,
+		ReasoningTokens: 25, CachedTokens: 10, CostUSD: 0.0123,
+		RawJSON: `{"prompt_tokens":120,"completion_tokens":340,"total_tokens":460,"cost":0.0123}`,
+	}
+	if err := db.SaveArtworkGeneration(artworkID, "<svg></svg>", usage); err != nil {
+		t.Fatal(err)
+	}
+
+	var prompt, completion, total, reasoning, cached int
+	var cost float64
+	var raw string
+	err = db.conn.QueryRow(`
+		SELECT prompt_tokens, completion_tokens, total_tokens, reasoning_tokens, cached_tokens, cost_usd, usage_json
+		FROM artwork_generations WHERE artwork_id = ?
+	`, artworkID).Scan(&prompt, &completion, &total, &reasoning, &cached, &cost, &raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prompt != 120 || completion != 340 || total != 460 || reasoning != 25 || cached != 10 || cost != 0.0123 || raw != usage.RawJSON {
+		t.Fatalf("stored usage = (%d, %d, %d, %d, %d, %f, %q)", prompt, completion, total, reasoning, cached, cost, raw)
+	}
+	artwork, err := db.GetArtwork(artworkID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if artwork.SVG != "<svg></svg>" {
+		t.Fatalf("SVG = %q", artwork.SVG)
+	}
+}

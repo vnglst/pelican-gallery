@@ -265,6 +265,21 @@ html {
   padding-bottom: 0.75rem;
 }
 
+.workshop-chronology .chronology-card,
+.workshop-chronology .chronology-original .chronology-card {
+  flex-basis: min(68vw, 14rem);
+  width: min(68vw, 14rem);
+}
+
+.workshop-chronology .chronology-card-header {
+  min-height: 4rem;
+  padding: 0.65rem 0.8rem;
+}
+
+.workshop-chronology .chronology-artwork {
+  padding: 0.75rem;
+}
+
 .workshop-artwork-card .chronology-card-header h3 {
   font-size: 1rem;
   line-height: 1.15;
@@ -272,8 +287,8 @@ html {
 
 .workshop-card-actions {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: 0.375rem;
+  right: 0.375rem;
   z-index: 20;
   display: flex;
   width: auto !important;
@@ -284,8 +299,8 @@ html {
 }
 
 .workshop-card-actions button {
-  width: 1.875rem;
-  height: 1.875rem;
+  width: 1.625rem;
+  height: 1.625rem;
 }
 
 .workshop-card-actions button + button {

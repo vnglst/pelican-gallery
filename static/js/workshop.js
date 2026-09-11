@@ -1,4 +1,4 @@
-import { html, render, useReducer, useEffect, useState } from "https://esm.sh/htm/preact/standalone";
+import { html, render, useReducer, useEffect, useRef, useState } from "https://esm.sh/htm/preact/standalone";
 import api from "/static/js/modules/api.js";
 import { ToastContainer, LoadingOverlay, ArtworkCard } from "/static/js/modules/components.js";
 import { ModelModal, ConfigModal } from "/static/js/modules/modals.js";
@@ -28,6 +28,13 @@ const compareChronology = (left, right) => {
 const WorkshopApp = () => {
   const [state, dispatch] = useReducer(reducer, createInitialState(window));
   const [activeProvider, setActiveProvider] = useState("openai");
+  const chronologyRef = useRef(null);
+
+  const scrollChronology = (direction) => {
+    const chronology = chronologyRef.current;
+    if (!chronology) return;
+    chronology.scrollBy({ left: direction * Math.max(240, chronology.clientWidth * 0.75), behavior: "smooth" });
+  };
 
   const showToast = (message, type = "info") => dispatch({ type: "PUSH_TOAST", payload: { message, type } });
   const removeToast = (index) => dispatch({ type: "REMOVE_TOAST", payload: index });
@@ -408,30 +415,34 @@ const WorkshopApp = () => {
 
   return html`
     <div>
-      <!-- Group Form -->
-      <div class="space-y-12">
-        <div class="w-full max-w-3xl mx-auto space-y-6">
-          <div class="space-y-6">
-            <div class="space-y-2">
+      <div class="flex flex-col gap-8">
+        <!-- Group Form -->
+        <details class="order-2 w-full max-w-5xl mx-auto border-t border-border pt-3" open=${!isEditing}>
+          <summary class="cursor-pointer select-none text-sm font-semibold py-2">
+            Artwork details
+            <span class="ml-2 font-normal text-fg/55">${state.formData.title || "Untitled artwork"}</span>
+          </summary>
+          <div class="space-y-3 pt-3">
+            <div class="space-y-1.5">
               <label for="prompt-input" class="block text-sm font-medium">Describe your artwork</label>
               <textarea
                 id="prompt-input"
-                class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg resize-none"
+                class="w-full px-3 py-2.5 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg resize-none"
                 placeholder="A serene mountain landscape with geometric patterns, flowing rivers, and abstract shapes in harmonious colors..."
-                rows="6"
+                rows="3"
                 value=${state.formData.prompt}
                 onInput=${(e) =>
                   dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, prompt: e.target.value } })}
               ></textarea>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="space-y-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1.5">
                 <label for="title-input" class="block text-sm font-medium">Title</label>
                 <input
                   type="text"
                   id="title-input"
-                  class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
                   placeholder="Mountain Landscape"
                   title="Enter a descriptive title for your artwork group"
                   value=${state.formData.title}
@@ -440,12 +451,12 @@ const WorkshopApp = () => {
                 />
               </div>
 
-              <div class="space-y-2">
+              <div class="space-y-1.5">
                 <label for="category-input" class="block text-sm font-medium">Category</label>
                 <input
                   type="text"
                   id="category-input"
-                  class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
                   placeholder="abstract, nature, geometric, etc."
                   value=${state.formData.category}
                   onInput=${(e) =>
@@ -454,35 +465,37 @@ const WorkshopApp = () => {
               </div>
             </div>
 
-            <div class="space-y-2">
-              <label for="original-url-input" class="block text-sm font-medium">Original Artwork URL</label>
-              <input
-                type="url"
-                id="original-url-input"
-                class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
-                placeholder="https://example.com/original-artwork.jpg"
-                value=${state.formData.original_url || ""}
-                onInput=${(e) =>
-                  dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, original_url: e.target.value } })}
-              />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="space-y-1.5">
+                <label for="original-url-input" class="block text-sm font-medium">Original artwork URL</label>
+                <input
+                  type="url"
+                  id="original-url-input"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  placeholder="https://example.com/artwork.jpg"
+                  value=${state.formData.original_url || ""}
+                  onInput=${(e) =>
+                    dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, original_url: e.target.value } })}
+                />
+              </div>
+
+              <div class="space-y-1.5">
+                <label for="artist-name-input" class="block text-sm font-medium">Artist name</label>
+                <input
+                  type="text"
+                  id="artist-name-input"
+                  class="w-full px-3 py-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  placeholder="Jane Doe"
+                  value=${state.formData.artist_name || ""}
+                  onInput=${(e) =>
+                    dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, artist_name: e.target.value } })}
+                />
+              </div>
             </div>
 
-            <div class="space-y-2">
-              <label for="artist-name-input" class="block text-sm font-medium">Artist Name</label>
-              <input
-                type="text"
-                id="artist-name-input"
-                class="w-full p-3 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
-                placeholder="Jane Doe"
-                value=${state.formData.artist_name || ""}
-                onInput=${(e) =>
-                  dispatch({ type: "SET_FORM_DATA", payload: { ...state.formData, artist_name: e.target.value } })}
-              />
-            </div>
-
-            <div class="space-y-2">
-              <label for="original-artwork-input" class="block text-sm font-medium">Original Artwork</label>
-              <div class="space-y-2">
+            <div class="space-y-1.5">
+              <label for="original-artwork-input" class="block text-sm font-medium">Original artwork</label>
+              <div class="space-y-1.5">
                 ${state.currentGroup?.id &&
                 state.originalArtworkUploaded > 0 &&
                 !state.selectedFile &&
@@ -491,7 +504,7 @@ const WorkshopApp = () => {
                     key=${state.originalArtworkUploaded}
                     src="${api.getOriginalArtworkUrl(state.currentGroup.id)}?t=${state.originalArtworkUploaded}"
                     alt="Original artwork"
-                    class="w-full max-h-64 object-contain border border-border"
+                    class="w-full max-h-40 object-contain border border-border"
                   />
                 `}
                 ${state.selectedFile &&
@@ -504,7 +517,7 @@ const WorkshopApp = () => {
                   type="file"
                   id="original-artwork-input"
                   accept="image/*"
-                  class="w-full p-2 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
+                  class="w-full px-2 py-1.5 border border-border bg-bg text-fg text-sm focus:outline-none focus:border-fg"
                   onChange=${handleFileSelect}
                 />
                 <p class="text-xs text-fg/70">
@@ -517,7 +530,7 @@ const WorkshopApp = () => {
 
             <div class="flex items-center gap-3">
               <button
-                class="px-6 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
+                class="px-4 py-2 bg-fg text-bg hover:bg-opacity-80 transition-colors duration-200 text-sm font-medium"
                 onClick=${saveGroup}
               >
                 ${isEditing ? "Update Group" : "Save Group"}
@@ -533,9 +546,9 @@ const WorkshopApp = () => {
               `}
             </div>
           </div>
-        </div>
+        </details>
 
-        <div class="min-w-0 space-y-5">
+        <div class="order-1 min-w-0 space-y-5">
           <div class="relative flex w-full min-w-0 flex-col items-center gap-3">
             <div class="provider-tabs scrollbar-hide !m-0" aria-label="Model provider">
               ${visibleProviders.map(
@@ -548,13 +561,27 @@ const WorkshopApp = () => {
                 `
               )}
             </div>
-            <button
-              class="self-center sm:absolute sm:right-0 sm:top-0 shrink-0 px-4 py-2 border border-border hover:bg-fg hover:text-bg transition-colors text-sm font-medium"
-              onClick=${handleAddModel}
-            >+ Add model</button>
+            <div class="flex self-center sm:absolute sm:right-0 sm:top-0">
+              <button
+                class="w-9 h-9 border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-colors"
+                aria-label="Show previous models"
+                title="Previous models"
+                onClick=${() => scrollChronology(-1)}
+              >←</button>
+              <button
+                class="w-9 h-9 -ml-px border border-border flex items-center justify-center hover:bg-fg hover:text-bg transition-colors"
+                aria-label="Show next models"
+                title="Next models"
+                onClick=${() => scrollChronology(1)}
+              >→</button>
+              <button
+                class="h-9 -ml-px shrink-0 px-3 border border-border hover:bg-fg hover:text-bg transition-colors text-sm font-medium"
+                onClick=${handleAddModel}
+              >+ Add model</button>
+            </div>
           </div>
 
-          <div class="chronology workshop-chronology scrollbar-hide" aria-label="Model chronology">
+          <div ref=${chronologyRef} class="chronology workshop-chronology scrollbar-hide" aria-label="Model chronology">
             ${chronologicalArtworks.map(
               (artwork) =>
                 html`

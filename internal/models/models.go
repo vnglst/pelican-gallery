@@ -66,8 +66,20 @@ type GenerateRequest struct {
 
 // GenerateResponse represents the response with generated SVG
 type GenerateResponse struct {
-	SVG   string `json:"svg"`
-	Error string `json:"error,omitempty"`
+	SVG   string          `json:"svg"`
+	Usage GenerationUsage `json:"usage"`
+	Error string          `json:"error,omitempty"`
+}
+
+// GenerationUsage is the billable usage reported by OpenRouter for one generation.
+type GenerationUsage struct {
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	TotalTokens      int     `json:"total_tokens"`
+	ReasoningTokens  int     `json:"reasoning_tokens"`
+	CachedTokens     int     `json:"cached_tokens"`
+	CostUSD          float64 `json:"cost_usd"`
+	RawJSON          string  `json:"-"`
 }
 
 // SaveArtworkRequest represents the request for saving an artwork
@@ -141,7 +153,21 @@ type Message struct {
 // OpenRouterResponse represents the response from OpenRouter API
 type OpenRouterResponse struct {
 	Choices []Choice         `json:"choices"`
+	Usage   OpenRouterUsage  `json:"usage"`
 	Error   *OpenRouterError `json:"error,omitempty"`
+}
+
+type OpenRouterUsage struct {
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	TotalTokens      int     `json:"total_tokens"`
+	Cost             float64 `json:"cost"`
+	PromptDetails    struct {
+		CachedTokens int `json:"cached_tokens"`
+	} `json:"prompt_tokens_details"`
+	CompletionDetails struct {
+		ReasoningTokens int `json:"reasoning_tokens"`
+	} `json:"completion_tokens_details"`
 }
 
 // Choice represents a choice in the OpenRouter response

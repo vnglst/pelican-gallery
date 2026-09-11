@@ -75,6 +75,21 @@ func (db *DB) CreateTables() error {
 	CREATE INDEX IF NOT EXISTS idx_artworks_group_id ON artworks(group_id);
 	CREATE INDEX IF NOT EXISTS idx_artwork_groups_created_at ON artwork_groups(created_at);
 	CREATE INDEX IF NOT EXISTS idx_artworks_created_at ON artworks(created_at);
+
+	CREATE TABLE IF NOT EXISTS artwork_generations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		artwork_id INTEGER NOT NULL,
+		prompt_tokens INTEGER NOT NULL DEFAULT 0,
+		completion_tokens INTEGER NOT NULL DEFAULT 0,
+		total_tokens INTEGER NOT NULL DEFAULT 0,
+		reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+		cached_tokens INTEGER NOT NULL DEFAULT 0,
+		cost_usd REAL NOT NULL DEFAULT 0,
+		usage_json TEXT NOT NULL DEFAULT '',
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (artwork_id) REFERENCES artworks(id) ON DELETE CASCADE
+	);
+	CREATE INDEX IF NOT EXISTS idx_artwork_generations_artwork_id ON artwork_generations(artwork_id);
 	`
 
 	_, err = db.conn.Exec(createTableSQL)
@@ -440,6 +455,42 @@ func (db *DB) SaveArtworkSVG(id int, svg string) error {
 		return fmt.Errorf("artwork with ID %d not found", id)
 	}
 
+	return nil
+}
+
+// SaveArtworkGeneration atomically stores the generated SVG and its billable usage.
+// A separate row is retained for every regeneration so lifetime cost is auditable.
+func (db *DB) SaveArtworkGeneration(id int, svg string, usage models.GenerationUsage) error {
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin artwork generation save: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.Exec(`UPDATE artworks SET svg = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, svg, id)
+	if err != nil {
+		return fmt.Errorf("failed to save artwork SVG: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get artwork rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("artwork with ID %d not found", id)
+	}
+
+	_, err = tx.Exec(`
+		INSERT INTO artwork_generations
+			(artwork_id, prompt_tokens, completion_tokens, total_tokens, reasoning_tokens, cached_tokens, cost_usd, usage_json)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, id, usage.PromptTokens, usage.CompletionTokens, usage.TotalTokens, usage.ReasoningTokens, usage.CachedTokens, usage.CostUSD, usage.RawJSON)
+	if err != nil {
+		return fmt.Errorf("failed to save artwork generation usage: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit artwork generation save: %w", err)
+	}
 	return nil
 }
 
