@@ -26,7 +26,8 @@
       </div>
 
       <main class="chronology-shell flex-1">
-        <nav class="provider-tabs scrollbar-hide" aria-label="Model provider">
+        <div class="chronology-navigation">
+        <nav class="provider-tabs scrollbar-hide !m-0" aria-label="Model provider">
           {{if gt (index .ProviderCounts "openai") 0}}
           <a href="/group/{{.Group.ID}}?provider=openai" class="provider-tab" {{if eq .ActiveProvider "openai"}}aria-current="page"{{end}}>OpenAI <span>{{index .ProviderCounts "openai"}}</span></a>
           {{end}}
@@ -41,7 +42,13 @@
           {{end}}
         </nav>
 
-        <div class="chronology scrollbar-hide" aria-label="Model chronology">
+        <div class="chronology-controls" aria-label="Chronology navigation">
+          <button type="button" data-chronology-scroll="previous" aria-label="Show previous models" title="Previous models">←</button>
+          <button type="button" data-chronology-scroll="next" aria-label="Show next models" title="Next models">→</button>
+        </div>
+        </div>
+
+        <div class="chronology scrollbar-hide" data-chronology aria-label="Model chronology">
           {{range .Artworks}}
           <figure id="artwork-{{.ID}}" class="chronology-card group" data-model="{{.Model}}">
             <figcaption class="chronology-card-header">
@@ -81,5 +88,6 @@
       {{template "footer" .}}
     </div>
     <script src="/static/js/artwork-download.js" defer></script>
+    <script src="/static/js/chronology-scroll.js" defer></script>
   </body>
 </html>
