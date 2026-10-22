@@ -16,7 +16,7 @@ RUN apk add --no-cache curl \
         --output /tailwindcss \
     && chmod +x /tailwindcss
 
-FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine3.24 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3-bookworm AS build
 
 ARG TARGETOS
 ARG TARGETARCH
