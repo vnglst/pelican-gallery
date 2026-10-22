@@ -18,9 +18,8 @@ function isXMLAttribute(attribute) {
 
 export function parseSVG(source) {
   if (typeof source === "string") {
-    const template = document.createElement("template");
-    template.innerHTML = source;
-    return template.content.querySelector("svg");
+    const parsed = new DOMParser().parseFromString(source, "text/html");
+    return parsed.querySelector("svg");
   }
   return source;
 }
