@@ -1,27 +1,19 @@
 import { html, useEffect, useRef } from "https://esm.sh/htm/preact/standalone";
+import { svgImageURL } from "../svg-image.js";
 
-// SVG Display component for safe HTML rendering
+// Each generated artwork gets its own SVG image document, including its CSS.
 const SVGDisplay = ({ svgContent }) => {
   const containerRef = useRef();
   useEffect(() => {
     if (containerRef.current && svgContent) {
-      containerRef.current.innerHTML = svgContent;
-      const svgElements = containerRef.current.querySelectorAll("svg");
-      svgElements.forEach((svg) => {
-        svg.style.maxWidth = "100%";
-        svg.style.maxHeight = "100%";
-        svg.style.width = "auto";
-        svg.style.height = "auto";
-        svg.style.display = "block";
-        svg.style.margin = "0 auto";
-      });
+      containerRef.current.src = svgImageURL(svgContent);
     }
   }, [svgContent]);
-  return html`<div
+  return html`<img
     ref=${containerRef}
-    class="w-full h-full flex items-center justify-center overflow-hidden"
-    style="max-width: 100%; max-height: 100%;"
-  ></div>`;
+    class="w-full h-full object-contain"
+    alt="Generated artwork"
+  />`;
 };
 
 // Toast system

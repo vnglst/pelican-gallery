@@ -1,3 +1,5 @@
+import { parseSVG, svgDimensions, svgImageURL } from "./svg-image.js";
+
 function safeFilename(title) {
   const filename = title
     .trim()
@@ -8,24 +10,11 @@ function safeFilename(title) {
   return filename || "artwork";
 }
 
-function svgDimensions(svg) {
-  const viewBox = svg.viewBox && svg.viewBox.baseVal;
-  if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
-    return { width: viewBox.width, height: viewBox.height };
-  }
-
-  const width = Number.parseFloat(svg.getAttribute("width"));
-  const height = Number.parseFloat(svg.getAttribute("height"));
-  return {
-    width: Number.isFinite(width) && width > 0 ? width : 1024,
-    height: Number.isFinite(height) && height > 0 ? height : 1024,
-  };
-}
-
 async function downloadArtwork(button) {
   const result = button.closest("figure");
   const media = result && result.querySelector("[data-artwork-media]");
-  const sourceSvg = media && media.querySelector("div > svg");
+  const source = media && media.querySelector("[data-svg-source]");
+  const sourceSvg = source && parseSVG(source.content.textContent);
   const sourceImage = media && media.querySelector("img");
   if (!sourceSvg && !sourceImage) return;
 
@@ -33,29 +22,18 @@ async function downloadArtwork(button) {
   button.setAttribute("aria-busy", "true");
 
   let image = sourceImage;
-  let imageUrl;
   let width = sourceImage && sourceImage.naturalWidth;
   let height = sourceImage && sourceImage.naturalHeight;
 
   try {
     if (sourceSvg) {
-      const svg = sourceSvg.cloneNode(true);
-      svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-
-      const dimensions = svgDimensions(svg);
+      const dimensions = svgDimensions(sourceSvg);
       const scale = Math.max(1, 2048 / Math.max(dimensions.width, dimensions.height));
       width = Math.round(dimensions.width * scale);
       height = Math.round(dimensions.height * scale);
-      svg.setAttribute("width", String(width));
-      svg.setAttribute("height", String(height));
-
-      const svgBlob = new Blob([new XMLSerializer().serializeToString(svg)], {
-        type: "image/svg+xml;charset=utf-8",
-      });
-      imageUrl = URL.createObjectURL(svgBlob);
       image = new Image();
       image.decoding = "async";
-      image.src = imageUrl;
+      image.src = svgImageURL(sourceSvg, { width, height });
       await image.decode();
     } else if (!sourceImage.complete) {
       await sourceImage.decode();
@@ -86,7 +64,6 @@ async function downloadArtwork(button) {
     console.error("Could not download artwork as PNG", error);
     window.alert("This artwork could not be downloaded as a PNG.");
   } finally {
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
     button.disabled = false;
     button.removeAttribute("aria-busy");
   }

@@ -1,7 +1,10 @@
 {{define "frame"}}
+{{if .}}
 <div
-  class="w-full h-full aspect-square bg-bg overflow-hidden flex items-center justify-center"
+  class="w-full h-full aspect-square bg-bg overflow-hidden flex items-center justify-center" data-svg-frame
 >
-  {{.}}
+  <template data-svg-source>{{printf "%s" .}}</template>
+  <img class="w-full h-full object-contain" alt="" />
 </div>
+{{end}}
 {{end}}
