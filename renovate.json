@@ -1,0 +1,47 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "enabledManagers": [
+    "gomod"
+  ],
+  "automerge": false,
+  "platformAutomerge": false,
+  "ignoreTests": false,
+  "vulnerabilityAlerts": {
+    "automerge": false
+  },
+  "packageRules": [
+    {
+      "description": "Include indirect Go dependencies in security lookups",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "indirect"
+      ],
+      "enabled": true
+    },
+    {
+      "description": "Keep extraction enabled but disable ordinary dependency updates after lookup",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchJsonata": [
+        "$exists(updateType) and ($not($exists(isVulnerabilityAlert)) or isVulnerabilityAlert = false)"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Only CRITICAL GitHub vulnerability alerts are eligible; PRs require manual review and merge",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchJsonata": [
+        "isVulnerabilityAlert and ($not($exists(vulnerabilitySeverity)) or vulnerabilitySeverity != 'CRITICAL')"
+      ],
+      "enabled": false
+    }
+  ]
+}
