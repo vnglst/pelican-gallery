@@ -4,7 +4,8 @@
     "config:recommended"
   ],
   "enabledManagers": [
-    "gomod"
+    "gomod",
+    "dockerfile"
   ],
   "automerge": false,
   "platformAutomerge": false,
@@ -42,6 +43,16 @@
         "isVulnerabilityAlert and ($not($exists(vulnerabilitySeverity)) or vulnerabilitySeverity != 'CRITICAL')"
       ],
       "enabled": false
+    },
+    {
+      "description": "Follow Dockerfile base images by tag and immutable digest; the runner's dependencies/images supervisor merges compatible updates and comments on the PR",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "enabled": true,
+      "pinDigests": true,
+      "minimumReleaseAge": "2 days",
+      "automerge": false
     }
   ]
 }
