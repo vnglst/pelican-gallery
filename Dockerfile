@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.29@sha256:572cebbc2b15e6f84c077742952674889cb63cd5e9b80abdffcbe587b6f19183
 
-FROM --platform=$BUILDPLATFORM alpine:3.24 AS tailwind
+FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS tailwind
 
 ARG BUILDARCH
 ARG TAILWIND_VERSION=v4.3.3
@@ -16,7 +16,7 @@ RUN apk add --no-cache curl \
         --output /tailwindcss \
     && chmod +x /tailwindcss
 
-FROM --platform=$BUILDPLATFORM golang:1.27.3-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3-bookworm@sha256:dc0963f32053e4bc451d24d87e3892d42d01021b61f093e98eb95c0352bb84b0 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /server ./main.go
 
-FROM alpine:3.24 AS runtime
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 
 RUN apk add --no-cache ca-certificates curl
 
